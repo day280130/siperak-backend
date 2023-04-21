@@ -120,6 +120,7 @@ const register: RequestHandler = async (req, res, next) => {
       userId: insertResult.id,
       userEmail: insertResult.email,
       userName: insertResult.name,
+      userRole: insertResult.role,
     });
 
     // generate access token
@@ -130,6 +131,7 @@ const register: RequestHandler = async (req, res, next) => {
         userId: insertResult.id,
         userEmail: insertResult.email,
         userName: insertResult.name,
+        userRole: insertResult.role,
       },
       csrfToken
     );
@@ -153,7 +155,7 @@ const register: RequestHandler = async (req, res, next) => {
           id: insertResult.id,
           email: insertResult.email,
           name: insertResult.name,
-          createdAt: insertResult.createdAt,
+          role: insertResult.role,
           accessToken,
         },
       ],
@@ -215,6 +217,7 @@ const login: RequestHandler = async (req, res, next) => {
       userId: user.id,
       userEmail: user.email,
       userName: user.name,
+      userRole: user.role,
     });
 
     // generate access token
@@ -225,6 +228,7 @@ const login: RequestHandler = async (req, res, next) => {
         userId: user.id,
         userEmail: user.email,
         userName: user.name,
+        userRole: user.role,
       },
       csrfToken
     );
@@ -248,7 +252,7 @@ const login: RequestHandler = async (req, res, next) => {
           id: user.id,
           email: user.email,
           name: user.name,
-          createdAt: user.createdAt,
+          role: user.role,
           accessToken,
         },
       ],
