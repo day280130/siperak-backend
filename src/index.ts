@@ -4,10 +4,10 @@ import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { todoRouters } from '@src/routers/TodoRouters.js';
-import { COOKIE_SECRET, cookieConfig } from '@src/configs/CookieConfigs.js';
+import { COOKIE_SECRET } from '@src/configs/CookieConfigs.js';
 import { authRouters } from '@src/routers/AuthRouters.js';
 import errorHandler from '@src/handlers/ErrorHandlers.js';
+import { SuccessResponse } from '@src/helpers/HandlerHelpers.js';
 
 // create express instance
 const app = express();
@@ -21,12 +21,12 @@ app.use(express.json()); // parses json request body
 app.use(compression()); // compresses request and response
 
 // routers
-app.use(todoRouters);
 app.use(authRouters);
-app.get('/', (req, res) => {
-  const detectedCookie = req.signedCookies['test-cookie'];
-  res.cookie('test-cookie', 'secret cookie value', cookieConfig);
-  res.json({ message: 'ok', detectedCookie });
+app.get('/', (_req, res) => {
+  return res.status(200).json({
+    status: 'success',
+    message: 'api ok!',
+  } satisfies SuccessResponse);
 });
 
 // global internal error handler
@@ -42,29 +42,3 @@ app.listen(port, () => {
     console.log(`Server started at http://localhost:${port}`);
   }
 });
-
-// testing prisma
-// import { PrismaClient } from '@prisma/client';
-
-// const prisma = new PrismaClient();
-
-// async function main() {
-//   const post = await prisma.post.update({
-//     where: { id: 1 },
-//     data: {
-//       published: true,
-//     },
-//   });
-
-//   console.log(post);
-// }
-
-// main()
-//   .then(async () => {
-//     await prisma.$disconnect();
-//   })
-//   .catch(async e => {
-//     console.error(e);
-//     await prisma.$disconnect();
-//     process.exit(1);
-//   });
