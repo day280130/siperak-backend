@@ -4,12 +4,9 @@ import { ErrorResponse, SuccessResponse, logError } from '@src/helpers/HandlerHe
 import { jwtPromisified } from '@src/helpers/JwtHelpers.js';
 import { MemcachedMethodError, memcached } from '@src/helpers/MemcachedHelpers.js';
 import { PrismaClientKnownRequestError, prisma } from '@src/helpers/PrismaHelpers.js';
+import { userSchema } from '@src/schemas/UserSchema.js';
 import { BinaryLike, createHash, randomBytes, scrypt } from 'crypto';
 import { RequestHandler } from 'express';
-import validatorNamespace from 'validator';
-import * as z from 'zod';
-
-const validator = validatorNamespace.default;
 
 const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen: number) =>
   new Promise<Buffer>((resolve, reject) => {
@@ -24,30 +21,7 @@ const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen:
 
 const PASSWORD_SECRET = process.env.PASSWORD_SECRET || 'super secret password';
 
-const userInputSchema = z.object({
-  email: z
-    .string({ required_error: 'email required' })
-    .email({ message: 'email not valid' })
-    .max(100, { message: 'email too long, max 100 characters' })
-    .trim()
-    .transform(val => validator.escape(val))
-    .transform(val => validator.normalizeEmail(val) as string),
-  name: z
-    .string({ required_error: 'name required' })
-    .max(100, { message: 'name too long, max 100 characters' })
-    .trim()
-    .refine(val => validator.isAlpha(val, 'en-US', { ignore: ' ' }), {
-      message: 'name should only contains alpha characters and spaces',
-    })
-    .transform(val => validator.escape(val)),
-  password: z
-    .string({ required_error: 'password required' })
-    .max(256, { message: 'password too long, max 256 characters' })
-    .trim()
-    .refine(val => validator.isStrongPassword(val), {
-      message: 'password should be at least 8 characters containing uppercases, lowercases, numbers, and symbols',
-    }),
-});
+const userInputSchema = userSchema.omit({ id: true, role: true });
 
 const generateCsrfToken: RequestHandler = async (_req, res, next) => {
   try {
