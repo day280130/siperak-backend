@@ -3,9 +3,9 @@ import { prisma } from '@src/helpers/PrismaHelpers.js';
 import { userSchema } from '@src/schemas/UserSchema.js';
 import { RequestHandler } from 'express';
 
-const userDataSchema = userSchema.omit({ password: true });
+const userDataSchema = userSchema.omit({ password: true, id: true });
 
-const getUser: RequestHandler = async (req, res, next) => {
+const getUserData: RequestHandler = async (req, res, next) => {
   try {
     const inputSchema = userSchema.pick({ id: true });
     const parsedParams = inputSchema.safeParse(req.params);
@@ -36,5 +36,5 @@ const getUser: RequestHandler = async (req, res, next) => {
 };
 
 export const userHandlers = {
-  getUser,
+  getUserData,
 };

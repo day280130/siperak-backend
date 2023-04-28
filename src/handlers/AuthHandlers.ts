@@ -265,7 +265,7 @@ const refresh: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: 'success',
       message: 'new access token generated',
-      datas: [{ accessToken, csrfToken }],
+      datas: [{ id: userId, accessToken, csrfToken }],
     } satisfies SuccessResponse);
   } catch (error) {
     // pass internal error to global error handler
