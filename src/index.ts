@@ -14,7 +14,14 @@ import { userRouters } from '@src/routers/UserRouters.js';
 const app = express();
 
 // global middlewares
-app.use(cors()); // enables cors
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTION',
+    allowedHeaders: 'X-PINGOTHER, authorization, x-csrf-token, Content-Type, Accept',
+  })
+); // enables cors
 app.use(helmet()); // use protection :)
 app.use(cookieParser(COOKIE_SECRET));
 app.use(express.urlencoded({ extended: true })); // parses urlencoded request body

@@ -10,17 +10,21 @@ export const checkAnonymousCsrfToken: RequestHandler = async (req, res, next) =>
   try {
     // check hashed csrf token presence in cookie
     const hashedCsrfToken = req.signedCookies[csrfCookieName];
+    // console.log('🚀 > constcheckAnonymousCsrfToken > hashedCsrfToken:', hashedCsrfToken);
     if (!hashedCsrfToken) throw new Error(AuthErrorMessages.ANONYM_CSRF_TOKEN_NOT_VALID_MESSAGE);
 
     // check csrf token presence in header
     const csrfToken = req.headers['x-csrf-token'] as string;
+    // console.log('🚀 > constcheckAnonymousCsrfToken > csrfToken:', csrfToken);
     if (!csrfToken) throw new Error(AuthErrorMessages.ANONYM_CSRF_TOKEN_NOT_VALID_MESSAGE);
 
     // get csrf key in cache
     const csrfKey = (await memcached.get(csrfToken)).result as string;
+    // console.log('🚀 > constcheckAnonymousCsrfToken > csrfKey:', csrfKey);
 
     // check hashed csrf token validity
     const expectedHashedCsrfToken = createHash('sha256').update(`${csrfKey}${csrfToken}`).digest('hex');
+    // console.log('🚀 > constcheckAnonymousCsrfToken > expectedHashedCsrfToken:', expectedHashedCsrfToken);
     if (expectedHashedCsrfToken !== hashedCsrfToken)
       throw new Error(AuthErrorMessages.ANONYM_CSRF_TOKEN_NOT_VALID_MESSAGE);
 
