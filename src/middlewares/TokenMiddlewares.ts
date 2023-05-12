@@ -17,7 +17,8 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
 
     // check access token presence in session cache store
     const checkResult = (await memcached.get(accessToken)).message;
-    if (checkResult === 'cache hit') {
+    // console.log('🚀 > checkAccessToken > checkResult:', checkResult);
+    if (checkResult !== 'cache hit') {
       throw new Error(AuthErrorMessages.ACCESS_TOKEN_EXPIRED);
     }
 
@@ -63,7 +64,8 @@ export const checkRefreshToken: RequestHandler = async (req, res, next) => {
 
     // check refresh token presence in session cache store
     const checkResult = (await memcached.get(refreshToken)).message;
-    if (checkResult === 'cache hit') {
+    // console.log('🚀 > checkRefreshToken > checkResult:', checkResult);
+    if (checkResult !== 'cache hit') {
       throw new Error(AuthErrorMessages.REFRESH_TOKEN_EXPIRED);
     }
 

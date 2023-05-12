@@ -210,7 +210,16 @@ const login: RequestHandler = async (req, res, next) => {
 
 const refresh: RequestHandler = async (req, res, next) => {
   try {
-    // get refresh token from cookie
+    // get old access token from header if any
+    const oldAccessTokenHeader = req.headers['authorization'] as string;
+    if (oldAccessTokenHeader && oldAccessTokenHeader.split(' ').length > 1) {
+      const oldAccessToken = oldAccessTokenHeader.split(' ')[1];
+
+      // invalidate old access token from session cache store if not expired yet
+      memcached.del(oldAccessToken);
+    }
+
+    // get refresh token from header
     const refreshToken = req.headers['x-refresh-token'] as string;
 
     // get user data from refresh token
@@ -218,6 +227,9 @@ const refresh: RequestHandler = async (req, res, next) => {
 
     // generate new access token
     const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', { userEmail, userId, userName, userRole });
+
+    // store new access token as short session key in cache
+    memcached.set(accessToken, userId, cacheDuration.medium);
 
     // send new csrf token and access token via response payload
     return res.status(200).json({
