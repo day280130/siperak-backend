@@ -17,7 +17,7 @@ app.use(
     origin: true,
     credentials: true,
     methods: 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTION',
-    allowedHeaders: 'X-PINGOTHER, authorization, x-csrf-token, Content-Type, Accept',
+    allowedHeaders: 'X-PINGOTHER, authorization, x-refresh-token, Content-Type, Accept',
   })
 ); // enables cors
 app.use(helmet()); // use protection :)
