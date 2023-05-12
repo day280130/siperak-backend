@@ -29,4 +29,5 @@ export interface JWTPayload extends JwtPayload {
   userRole: UserToken['role'];
 }
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'super secret jwt';
+export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'super secret access token';
+export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'super secret refresh token';
