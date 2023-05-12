@@ -69,6 +69,9 @@ const register: RequestHandler = async (req, res, next) => {
       userRole: insertResult.role,
     });
 
+    // store refresh token as long session key in cache
+    memcached.set(refreshToken, insertResult.id, cacheDuration.super);
+
     // generate access token
     const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', {
       userId: insertResult.id,
@@ -76,6 +79,9 @@ const register: RequestHandler = async (req, res, next) => {
       userName: insertResult.name,
       userRole: insertResult.role,
     });
+
+    // store access token as short session key in cache
+    memcached.set(accessToken, insertResult.id, cacheDuration.medium);
 
     // send created user and access token via response payload
     return res.status(201).json({
@@ -167,6 +173,9 @@ const login: RequestHandler = async (req, res, next) => {
       userRole: user.role,
     });
 
+    // store refresh token as long session key in cache
+    memcached.set(refreshToken, user.id, cacheDuration.super);
+
     // generate access token
     const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', {
       userId: user.id,
@@ -174,6 +183,9 @@ const login: RequestHandler = async (req, res, next) => {
       userName: user.name,
       userRole: user.role,
     });
+
+    // store refresh token as long session key in cache
+    memcached.set(accessToken, user.id, cacheDuration.super);
 
     // send logged in user data and access token via response payload
     return res.status(200).json({
@@ -219,14 +231,21 @@ const refresh: RequestHandler = async (req, res, next) => {
   }
 };
 
-// const logout: RequestHandler = async (req, res) => {
-//   const refreshToken = req.signedCookies[refreshCookieName];
-//   clearSession(res, refreshToken);
-//   return res.status(200).json({
-//     status: 'success',
-//     message: 'logged out',
-//   } satisfies SuccessResponse);
-// };
+const logout: RequestHandler = async (req, res, next) => {
+  try {
+    const refreshToken = req.headers['x-refresh-token'] as string;
+    const accessTokenHeader = req.headers['authorization'] as string;
+    const accessToken = accessTokenHeader.split(' ')[1];
+    memcached.del(refreshToken);
+    memcached.del(accessToken);
+    return res.status(200).json({
+      status: 'success',
+      message: 'logged out',
+    } satisfies SuccessResponse);
+  } catch (error) {
+    next(error);
+  }
+};
 
 const checkSession: RequestHandler = async (req, res) => {
   const refreshToken = req.headers['x-refresh-token'] as string;
@@ -248,6 +267,6 @@ export const authHandlers = {
   login,
   register,
   refresh,
-  // logout,
+  logout,
   checkSession,
 };

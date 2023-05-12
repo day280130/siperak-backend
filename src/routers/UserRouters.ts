@@ -1,5 +1,5 @@
 import { userHandlers } from '@src/handlers/UserHandlers.js';
-import { checkAccessToken } from '@src/middlewares/AccessTokenMiddleware.js';
+import { checkAccessToken } from '@src/middlewares/TokenMiddlewares.js';
 import { Router } from 'express';
 
 export const userRouters = Router();
