@@ -3,8 +3,6 @@ import express from 'express';
 import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
-import { COOKIE_SECRET } from '@src/configs/CookieConfigs.js';
 import { authRouters } from '@src/routers/AuthRouters.js';
 import errorHandler from '@src/handlers/ErrorHandlers.js';
 import { SuccessResponse } from '@src/helpers/HandlerHelpers.js';
@@ -23,7 +21,6 @@ app.use(
   })
 ); // enables cors
 app.use(helmet()); // use protection :)
-app.use(cookieParser(COOKIE_SECRET));
 app.use(express.urlencoded({ extended: true })); // parses urlencoded request body
 app.use(express.json()); // parses json request body
 app.use(compression()); // compresses request and response

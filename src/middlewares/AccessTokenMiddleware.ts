@@ -12,8 +12,7 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
     if (!accessToken) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
 
     // verify access token
-    const csrfToken = req.headers['x-csrf-token'] as string;
-    await jwtPromisified.verify('ACCESS_TOKEN', accessToken, csrfToken);
+    await jwtPromisified.verify('ACCESS_TOKEN', accessToken);
 
     // all check pass
     next();

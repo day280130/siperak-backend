@@ -1,11 +1,9 @@
-import { cookieConfig, csrfCookieName, refreshCookieName } from '@src/configs/CookieConfigs.js';
-import { clearSession } from '@src/helpers/AuthHelpers.js';
 import { ErrorResponse, SuccessResponse, logError } from '@src/helpers/HandlerHelpers.js';
 import { jwtPromisified } from '@src/helpers/JwtHelpers.js';
 import { MemcachedMethodError, memcached } from '@src/helpers/MemcachedHelpers.js';
 import { PrismaClientKnownRequestError, prisma } from '@src/helpers/PrismaHelpers.js';
 import { userSchema } from '@src/schemas/UserSchema.js';
-import { BinaryLike, createHash, randomBytes, scrypt } from 'crypto';
+import { BinaryLike, scrypt } from 'crypto';
 import { RequestHandler } from 'express';
 
 const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen: number) =>
@@ -22,32 +20,6 @@ const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen:
 const PASSWORD_SECRET = process.env.PASSWORD_SECRET || 'super secret password';
 
 const userInputSchema = userSchema.omit({ id: true, role: true });
-
-const generateCsrfToken: RequestHandler = async (_req, res, next) => {
-  try {
-    // generate random 16 bytes csrf key and 32 bytes csrf token
-    const csrfKey = randomBytes(16).toString('hex');
-    const csrfToken = randomBytes(32).toString('hex');
-
-    // hash csrf token with csrf key
-    const hashedCsrfToken = createHash('sha256').update(`${csrfKey}${csrfToken}`).digest('hex');
-
-    // store csrf key in cache with key of csrf token
-    await memcached.set(csrfToken, csrfKey, 5 * 60);
-
-    // send hashed csrf token via cookie
-    res.cookie(csrfCookieName, hashedCsrfToken, cookieConfig);
-
-    // send csrf token via response payload
-    return res.status(200).json({
-      status: 'success',
-      message: 'anonymous csrf token generated successfully',
-      datas: [{ csrfToken }],
-    } satisfies SuccessResponse);
-  } catch (error) {
-    next(error);
-  }
-};
 
 const register: RequestHandler = async (req, res, next) => {
   try {
@@ -98,27 +70,12 @@ const register: RequestHandler = async (req, res, next) => {
     });
 
     // generate access token
-    const csrfToken = req.headers['x-csrf-token'] as string;
-    const accessToken = await jwtPromisified.sign(
-      'ACCESS_TOKEN',
-      {
-        userId: insertResult.id,
-        userEmail: insertResult.email,
-        userName: insertResult.name,
-        userRole: insertResult.role,
-      },
-      csrfToken
-    );
-
-    // store csrf key in cache with key of refresh token
-    const csrfKey = (await memcached.get(csrfToken)).result as string;
-    await memcached.set(refreshToken, csrfKey, 7 * 24 * 60 * 60);
-
-    // delete csrf key in cache with key of csrf token
-    await memcached.del(csrfToken);
-
-    // send refresh token via cookie
-    res.cookie(refreshCookieName, refreshToken, cookieConfig);
+    const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', {
+      userId: insertResult.id,
+      userEmail: insertResult.email,
+      userName: insertResult.name,
+      userRole: insertResult.role,
+    });
 
     // send created user and access token via response payload
     return res.status(201).json({
@@ -130,6 +87,7 @@ const register: RequestHandler = async (req, res, next) => {
           email: insertResult.email,
           name: insertResult.name,
           role: insertResult.role,
+          refreshToken,
           accessToken,
         },
       ],
@@ -195,27 +153,12 @@ const login: RequestHandler = async (req, res, next) => {
     });
 
     // generate access token
-    const csrfToken = req.headers['x-csrf-token'] as string;
-    const accessToken = await jwtPromisified.sign(
-      'ACCESS_TOKEN',
-      {
-        userId: user.id,
-        userEmail: user.email,
-        userName: user.name,
-        userRole: user.role,
-      },
-      csrfToken
-    );
-
-    // store csrf key in cache with key of refresh token
-    const csrfKey = (await memcached.get(csrfToken)).result as string;
-    await memcached.set(refreshToken, csrfKey, 7 * 24 * 60 * 60);
-
-    // delete csrf key in cache with key of csrf token
-    await memcached.del(csrfToken);
-
-    // send refresh token via cookie
-    res.cookie(refreshCookieName, refreshToken, cookieConfig);
+    const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', {
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      userRole: user.role,
+    });
 
     // send logged in user data and access token via response payload
     return res.status(200).json({
@@ -227,6 +170,7 @@ const login: RequestHandler = async (req, res, next) => {
           email: user.email,
           name: user.name,
           role: user.role,
+          refreshToken,
           accessToken,
         },
       ],
@@ -240,32 +184,19 @@ const login: RequestHandler = async (req, res, next) => {
 const refresh: RequestHandler = async (req, res, next) => {
   try {
     // get refresh token from cookie
-    const refreshToken = req.signedCookies[refreshCookieName];
+    const refreshToken = req.headers['x-refresh-token'] as string;
 
     // get user data from refresh token
-    const { userEmail, userId, userName } = await jwtPromisified.decode(refreshToken);
-
-    // generate new random 16 bytes csrf key and 32 bytes csrf token
-    const csrfKey = randomBytes(16).toString('hex');
-    const csrfToken = randomBytes(32).toString('hex');
-
-    // generate new hashed csrf token with csrf key
-    const hashedCsrfToken = createHash('sha256').update(`${csrfKey}${csrfToken}`).digest('hex');
-
-    // update cache with key of refresh token
-    await memcached.set(refreshToken, csrfKey, 7 * 24 * 60 * 60);
+    const { userEmail, userId, userName, userRole } = await jwtPromisified.decode(refreshToken);
 
     // generate new access token
-    const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', { userEmail, userId, userName }, csrfToken);
-
-    // send hashed csrf token via cookie
-    res.cookie(csrfCookieName, hashedCsrfToken, cookieConfig);
+    const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', { userEmail, userId, userName, userRole });
 
     // send new csrf token and access token via response payload
     return res.status(200).json({
       status: 'success',
       message: 'new access token generated',
-      datas: [{ id: userId, accessToken, csrfToken }],
+      datas: [{ id: userId, refreshToken, accessToken }],
     } satisfies SuccessResponse);
   } catch (error) {
     // pass internal error to global error handler
@@ -273,20 +204,17 @@ const refresh: RequestHandler = async (req, res, next) => {
   }
 };
 
-const logout: RequestHandler = async (req, res) => {
-  const refreshToken = req.signedCookies[refreshCookieName];
-  clearSession(res, refreshToken);
-  return res.status(200).json({
-    status: 'success',
-    message: 'logged out',
-  } satisfies SuccessResponse);
-};
+// const logout: RequestHandler = async (req, res) => {
+//   const refreshToken = req.signedCookies[refreshCookieName];
+//   clearSession(res, refreshToken);
+//   return res.status(200).json({
+//     status: 'success',
+//     message: 'logged out',
+//   } satisfies SuccessResponse);
+// };
 
 const checkSession: RequestHandler = async (req, res) => {
-  const hashedCsrfToken = req.signedCookies[csrfCookieName];
-  const csrfToken = req.headers['x-csrf-token'] as string;
-  const refreshToken = req.signedCookies[refreshCookieName];
-  const csrfKey = (await memcached.get(refreshToken)).result as string;
+  const refreshToken = req.headers['x-refresh-token'] as string;
   const accessTokenHeader = req.headers['authorization'] as string;
   const accessToken = accessTokenHeader.split(' ')[1];
   return res.status(200).json({
@@ -294,9 +222,6 @@ const checkSession: RequestHandler = async (req, res) => {
     message: 'session ok!',
     datas: [
       {
-        csrfToken,
-        csrfKey,
-        hashedCsrfToken,
         refreshToken,
         accessToken,
       },
@@ -304,29 +229,10 @@ const checkSession: RequestHandler = async (req, res) => {
   } satisfies SuccessResponse);
 };
 
-const checkToken: RequestHandler = async (req, res) => {
-  const hashedCsrfToken = req.signedCookies[csrfCookieName];
-  const csrfToken = req.headers['x-csrf-token'] as string;
-  const csrfKey = (await memcached.get(csrfToken)).result as string;
-  return res.status(200).json({
-    status: 'success',
-    message: 'csrf token ok!',
-    datas: [
-      {
-        csrfToken,
-        csrfKey,
-        hashedCsrfToken,
-      },
-    ],
-  } satisfies SuccessResponse);
-};
-
 export const authHandlers = {
-  generateCsrfToken,
-  checkToken,
   login,
   register,
   refresh,
-  logout,
+  // logout,
   checkSession,
 };

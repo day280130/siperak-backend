@@ -1,79 +1,42 @@
-import {
-  JWTPayload,
-  JWT_SECRET,
-  accessTokenConfig,
-  refreshTokenConfig,
-  verifyConfig,
-} from '@src/configs/JwtConfigs.js';
-import jwt from 'jsonwebtoken';
+import { JWTPayload, JWT_SECRET, accessTokenConfig, refreshTokenConfig } from '@src/configs/JwtConfigs.js';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import { VerifyOptions } from 'jsonwebtoken';
 
-type SignParams =
-  | {
-      tokenType: 'ACCESS_TOKEN';
-      initialPayload: JWTPayload;
-      csrfToken: string;
-    }
-  | {
-      tokenType: 'REFRESH_TOKEN';
-      initialPayload: JWTPayload;
-    };
-
-const sign = async <T extends SignParams['tokenType']>(
-  ...args: Extract<SignParams, { tokenType: T }> extends { csrfToken: string }
-    ? [tokenType: T, initialPayload: JWTPayload, csrfToken: string]
-    : [tokenType: T, initialPayload: JWTPayload]
-) => {
-  const [tokenType, initialPayload, csrfToken] = args;
+const sign = async (tokenType: 'REFRESH_TOKEN' | 'ACCESS_TOKEN', initialPayload: JWTPayload) => {
+  let config: SignOptions;
   if (tokenType === 'ACCESS_TOKEN') {
-    const config = accessTokenConfig;
-    return new Promise<string>((resolve, reject) => {
-      jwt.sign(initialPayload, `${JWT_SECRET}${csrfToken}`, config, (error, token) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(token ?? 'error');
-        }
-      });
-    });
+    config = accessTokenConfig;
   } else if (tokenType === 'REFRESH_TOKEN') {
-    const config = refreshTokenConfig;
-    return new Promise<string>((resolve, reject) => {
-      jwt.sign(initialPayload, `${JWT_SECRET}`, config, (error, token) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(token ?? 'error');
-        }
-      });
-    });
+    config = refreshTokenConfig;
   } else {
     return new Promise<string>((_resolve, reject) => {
-      reject('token type not supplied');
+      reject('valid token type not supplied');
     });
   }
+  return new Promise<string>((resolve, reject) => {
+    jwt.sign(initialPayload, `${JWT_SECRET}`, config, (error, token) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(token ?? 'error');
+      }
+    });
+  });
 };
 
-type VerifyParams =
-  | {
-      tokenType: 'ACCESS_TOKEN';
-      token: string;
-      csrfToken: string;
-    }
-  | {
-      tokenType: 'REFRESH_TOKEN';
-      token: string;
-    };
-
-const verify = async <T extends VerifyParams['tokenType']>(
-  ...args: Extract<VerifyParams, { tokenType: T }> extends { csrfToken: string }
-    ? [tokenType: T, token: string, csrfToken: string]
-    : [tokenType: T, token: string]
-) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_tokenType, token, csrfToken] = args;
-  const secret = `${JWT_SECRET}${csrfToken ? csrfToken : ''}`;
+const verify = async (tokenType: 'REFRESH_TOKEN' | 'ACCESS_TOKEN', token: string) => {
+  let config: VerifyOptions;
+  if (tokenType === 'ACCESS_TOKEN') {
+    config = accessTokenConfig;
+  } else if (tokenType === 'REFRESH_TOKEN') {
+    config = refreshTokenConfig;
+  } else {
+    return new Promise<string>((_resolve, reject) => {
+      reject('valid token type not supplied');
+    });
+  }
   return new Promise<JWTPayload>((resolve, reject) => {
-    jwt.verify(token, secret, verifyConfig, (error, payload) => {
+    jwt.verify(token, JWT_SECRET, config, (error, payload) => {
       if (error) {
         reject(error);
       } else {

@@ -27,3 +27,5 @@ export const userSchema = z.object({
     }),
   role: z.enum(['ADMIN', 'USER']),
 });
+
+export type UserData = z.infer<typeof userSchema>;
