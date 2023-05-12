@@ -1,6 +1,6 @@
 import { ErrorResponse, SuccessResponse, logError } from '@src/helpers/HandlerHelpers.js';
 import { jwtPromisified } from '@src/helpers/JwtHelpers.js';
-import { MemcachedMethodError, memcached } from '@src/helpers/MemcachedHelpers.js';
+import { MemcachedMethodError, cacheDuration, memcached } from '@src/helpers/MemcachedHelpers.js';
 import { PrismaClientKnownRequestError, prisma } from '@src/helpers/PrismaHelpers.js';
 import { userSchema } from '@src/schemas/UserSchema.js';
 import { BinaryLike, scrypt } from 'crypto';
@@ -50,8 +50,8 @@ const register: RequestHandler = async (req, res, next) => {
     try {
       await memcached.set(
         `user:${insertResult.id}`,
-        JSON.stringify({ email: insertResult.email, name: insertResult.name }),
-        60
+        JSON.stringify({ email: insertResult.email, name: insertResult.name, role: insertResult.role }),
+        cacheDuration.short
       );
     } catch (error) {
       if (error instanceof MemcachedMethodError) {
@@ -142,6 +142,21 @@ const login: RequestHandler = async (req, res, next) => {
         status: 'error',
         message: 'email or password is wrong',
       } satisfies ErrorResponse);
+    }
+
+    // store created user to cache (potential non-harmful error)
+    try {
+      await memcached.set(
+        `user:${user.id}`,
+        JSON.stringify({ email: user.email, name: user.name, role: user.role }),
+        cacheDuration.short
+      );
+    } catch (error) {
+      if (error instanceof MemcachedMethodError) {
+        logError(`${req.path} > memcached user set`, error, true);
+      } else {
+        logError(`${req.path} > memcached user set`, error, false);
+      }
     }
 
     // generate refresh token

@@ -84,3 +84,9 @@ const del = async (key: string) =>
  * created by : Dimas
  */
 export const memcached = { set, get, touch, del };
+
+export const cacheDuration = {
+  long: 3600, // 1 hour
+  medium: 1800, // 30 minutes
+  short: 300, // 5 minutes
+};
