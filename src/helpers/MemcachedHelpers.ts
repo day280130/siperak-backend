@@ -90,4 +90,4 @@ export const cacheDuration = {
   long: 60 * 60, // 1 hour
   medium: 30 * 60, // 30 minutes
   short: 5 * 60, // 5 minutes
-};
+} as const;
