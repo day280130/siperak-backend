@@ -5,3 +5,4 @@ coverage
 src/test.ts
 .space
 Spacefile
+sslcert
