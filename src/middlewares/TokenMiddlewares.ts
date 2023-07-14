@@ -3,13 +3,14 @@ import { ErrorResponse } from '@src/helpers/HandlerHelpers.js';
 import { JsonWebTokenError, TokenExpiredError, jwtPromisified } from '@src/helpers/JwtHelpers.js';
 import { MemcachedMethodError, memcached } from '@src/helpers/MemcachedHelpers.js';
 import { RequestHandler } from 'express';
+import * as z from 'zod';
 
 export const checkAccessToken: RequestHandler = async (req, res, next) => {
   try {
     // check access token presence in header
-    const accessTokenHeader = req.headers['authorization'] as string;
-    if (!accessTokenHeader) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
-    const accessToken = accessTokenHeader.split(' ')[1];
+    const accessTokenHeader = z.string().safeParse(req.headers['authorization']);
+    if (!accessTokenHeader.success) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
+    const accessToken = accessTokenHeader.data.split(' ')[1];
     if (!accessToken) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
 
     // verify access token
@@ -56,8 +57,9 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
 export const checkRefreshToken: RequestHandler = async (req, res, next) => {
   try {
     // check refresh token presence in header
-    const refreshToken = req.headers['x-refresh-token'] as string;
-    if (!refreshToken) throw new Error(AuthErrorMessages.REFRESH_TOKEN_NOT_VALID_MESSAGE);
+    const refreshTokenHeader = z.string().safeParse(req.headers['x-refresh-token']);
+    if (!refreshTokenHeader.success) throw new Error(AuthErrorMessages.REFRESH_TOKEN_NOT_VALID_MESSAGE);
+    const refreshToken = refreshTokenHeader.data;
 
     // verify refresh token
     await jwtPromisified.verify('REFRESH_TOKEN', refreshToken);
