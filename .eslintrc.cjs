@@ -15,7 +15,6 @@ module.exports = {
   rules: {
     indent: ['warn', 2],
     'linebreak-style': ['warn', 'unix'],
-    quotes: ['warn', 'single'],
     semi: ['warn', 'always'],
     '@typescript-eslint/no-unused-vars': [
       'warn',
