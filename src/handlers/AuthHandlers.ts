@@ -1,6 +1,7 @@
+import { cacheDuration } from '@src/configs/MemcachedConfigs.js';
 import { ErrorResponse, SuccessResponse, logError } from '@src/helpers/HandlerHelpers.js';
 import { jwtPromisified } from '@src/helpers/JwtHelpers.js';
-import { MemcachedMethodError, cacheDuration, memcached } from '@src/helpers/MemcachedHelpers.js';
+import { MemcachedMethodError, memcached } from '@src/helpers/MemcachedHelpers.js';
 import { PrismaClientKnownRequestError, prisma } from '@src/helpers/PrismaHelpers.js';
 import { userSchema } from '@src/schemas/UserSchema.js';
 import { BinaryLike, scrypt } from 'crypto';

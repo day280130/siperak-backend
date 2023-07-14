@@ -1,13 +1,4 @@
-import Memcached from 'memcached';
-
-export const memcachedDefault = new Memcached('localhost:11211', {
-  maxExpiration: 8 * 24 * 60 * 60, // 8 days
-  reconnect: 1000,
-  retries: 0,
-  failures: 1,
-  timeout: 1000,
-  retry: 1000,
-});
+import { memcachedDefault } from '@src/configs/MemcachedConfigs.js';
 
 export class MemcachedMethodError extends Error {
   public reason;
@@ -84,10 +75,3 @@ const del = async (key: string) =>
  * created by : Dimas
  */
 export const memcached = { set, get, touch, del };
-
-export const cacheDuration = {
-  super: 604800, // 7 days
-  long: 3600, // 1 hour
-  medium: 1800, // 30 minutes
-  short: 300, // 5 minutes
-} as const;
