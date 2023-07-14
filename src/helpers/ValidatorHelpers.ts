@@ -1,3 +1,3 @@
-import validatorNamespace from 'validator';
+import validatorNamespace from "validator";
 
 export const validatorObj = validatorNamespace.default;

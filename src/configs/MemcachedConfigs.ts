@@ -1,6 +1,6 @@
-import Memcached from 'memcached';
+import Memcached from "memcached";
 
-export const memcachedDefault = new Memcached(process.env.CACHE_DB_URL ?? 'localhost:11211', {
+export const memcachedDefault = new Memcached(process.env.CACHE_DB_URL ?? "localhost:11211", {
   maxExpiration: 8 * 24 * 60 * 60, // 8 days
   reconnect: 1000,
   retries: 0,

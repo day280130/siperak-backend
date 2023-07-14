@@ -1,11 +1,11 @@
-import { cacheDuration } from '@src/configs/MemcachedConfigs.js';
-import { ErrorResponse, SuccessResponse, logError } from '@src/helpers/HandlerHelpers.js';
-import { jwtPromisified } from '@src/helpers/JwtHelpers.js';
-import { MemcachedMethodError, memcached } from '@src/helpers/MemcachedHelpers.js';
-import { PrismaClientKnownRequestError, prisma } from '@src/helpers/PrismaHelpers.js';
-import { userSchema } from '@src/schemas/UserSchema.js';
-import { BinaryLike, scrypt } from 'crypto';
-import { RequestHandler } from 'express';
+import { cacheDuration } from "@src/configs/MemcachedConfigs.js";
+import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHelpers.js";
+import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
+import { MemcachedMethodError, memcached } from "@src/helpers/MemcachedHelpers.js";
+import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
+import { userSchema } from "@src/schemas/UserSchema.js";
+import { BinaryLike, scrypt } from "crypto";
+import { RequestHandler } from "express";
 
 const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen: number) =>
   new Promise<Buffer>((resolve, reject) => {
@@ -18,7 +18,7 @@ const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen:
     });
   });
 
-const PASSWORD_SECRET = process.env.PASSWORD_SECRET || 'super secret password';
+const PASSWORD_SECRET = process.env.PASSWORD_SECRET || "super secret password";
 
 const userInputSchema = userSchema.omit({ id: true, role: true });
 
@@ -28,15 +28,15 @@ const register: RequestHandler = async (req, res, next) => {
     const parsedBody = userInputSchema.safeParse(req.body);
     if (!parsedBody.success) {
       return res.status(400).json({
-        status: 'error',
-        message: 'request body not valid',
+        status: "error",
+        message: "request body not valid",
         errors: parsedBody.error.issues,
       } satisfies ErrorResponse);
     }
     const { email, name, password } = parsedBody.data;
 
     // hash password
-    const hashedPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString('hex');
+    const hashedPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
 
     // insert user to database
     const insertResult = await prisma.user.create({
@@ -63,7 +63,7 @@ const register: RequestHandler = async (req, res, next) => {
     }
 
     // generate refresh token
-    const refreshToken = await jwtPromisified.sign('REFRESH_TOKEN', {
+    const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", {
       userId: insertResult.id,
       userEmail: insertResult.email,
       userName: insertResult.name,
@@ -74,7 +74,7 @@ const register: RequestHandler = async (req, res, next) => {
     memcached.set(refreshToken, insertResult.id, cacheDuration.super);
 
     // generate access token
-    const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', {
+    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", {
       userId: insertResult.id,
       userEmail: insertResult.email,
       userName: insertResult.name,
@@ -86,8 +86,8 @@ const register: RequestHandler = async (req, res, next) => {
 
     // send created user and access token via response payload
     return res.status(201).json({
-      status: 'success',
-      message: 'user created',
+      status: "success",
+      message: "user created",
       datas: [
         {
           id: insertResult.id,
@@ -101,11 +101,11 @@ const register: RequestHandler = async (req, res, next) => {
     } satisfies SuccessResponse);
   } catch (error) {
     // catch register unique email violation
-    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-      if (error.meta?.target === 'user_email_key') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+      if (error.meta?.target === "user_email_key") {
         return res.status(400).json({
-          status: 'error',
-          message: 'account with presented email already exist in the database',
+          status: "error",
+          message: "account with presented email already exist in the database",
         } satisfies ErrorResponse);
       }
     }
@@ -122,8 +122,8 @@ const login: RequestHandler = async (req, res, next) => {
     const parsedBody = bodySchema.safeParse(req.body);
     if (!parsedBody.success) {
       return res.status(400).json({
-        status: 'error',
-        message: 'request body not valid',
+        status: "error",
+        message: "request body not valid",
         errors: parsedBody.error.issues,
       } satisfies ErrorResponse);
     }
@@ -137,17 +137,17 @@ const login: RequestHandler = async (req, res, next) => {
     });
     if (!user) {
       return res.status(404).json({
-        status: 'error',
-        message: 'email or password is wrong',
+        status: "error",
+        message: "email or password is wrong",
       } satisfies ErrorResponse);
     }
 
     // check password
-    const hashedGivenPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString('hex');
+    const hashedGivenPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
     if (hashedGivenPassword !== user.password) {
       return res.status(400).json({
-        status: 'error',
-        message: 'email or password is wrong',
+        status: "error",
+        message: "email or password is wrong",
       } satisfies ErrorResponse);
     }
 
@@ -167,7 +167,7 @@ const login: RequestHandler = async (req, res, next) => {
     }
 
     // generate refresh token
-    const refreshToken = await jwtPromisified.sign('REFRESH_TOKEN', {
+    const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", {
       userId: user.id,
       userEmail: user.email,
       userName: user.name,
@@ -178,7 +178,7 @@ const login: RequestHandler = async (req, res, next) => {
     memcached.set(refreshToken, user.id, cacheDuration.super);
 
     // generate access token
-    const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', {
+    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", {
       userId: user.id,
       userEmail: user.email,
       userName: user.name,
@@ -190,8 +190,8 @@ const login: RequestHandler = async (req, res, next) => {
 
     // send logged in user data and access token via response payload
     return res.status(200).json({
-      status: 'success',
-      message: 'logged in',
+      status: "success",
+      message: "logged in",
       datas: [
         {
           id: user.id,
@@ -212,30 +212,30 @@ const login: RequestHandler = async (req, res, next) => {
 const refresh: RequestHandler = async (req, res, next) => {
   try {
     // get old access token from header if any
-    const oldAccessTokenHeader = req.headers['authorization'] as string;
-    if (oldAccessTokenHeader && oldAccessTokenHeader.split(' ').length > 1) {
-      const oldAccessToken = oldAccessTokenHeader.split(' ')[1];
+    const oldAccessTokenHeader = req.headers["authorization"] as string;
+    if (oldAccessTokenHeader && oldAccessTokenHeader.split(" ").length > 1) {
+      const oldAccessToken = oldAccessTokenHeader.split(" ")[1];
 
       // invalidate old access token from session cache store if not expired yet
       memcached.del(oldAccessToken);
     }
 
     // get refresh token from header
-    const refreshToken = req.headers['x-refresh-token'] as string;
+    const refreshToken = req.headers["x-refresh-token"] as string;
 
     // get user data from refresh token
     const { userEmail, userId, userName, userRole } = await jwtPromisified.decode(refreshToken);
 
     // generate new access token
-    const accessToken = await jwtPromisified.sign('ACCESS_TOKEN', { userEmail, userId, userName, userRole });
+    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", { userEmail, userId, userName, userRole });
 
     // store new access token as short session key in cache
     memcached.set(accessToken, userId, cacheDuration.medium);
 
     // send new csrf token and access token via response payload
     return res.status(200).json({
-      status: 'success',
-      message: 'new access token generated',
+      status: "success",
+      message: "new access token generated",
       datas: [{ id: userId, accessToken }],
     } satisfies SuccessResponse);
   } catch (error) {
@@ -246,14 +246,14 @@ const refresh: RequestHandler = async (req, res, next) => {
 
 const logout: RequestHandler = async (req, res, next) => {
   try {
-    const refreshToken = req.headers['x-refresh-token'] as string;
-    const accessTokenHeader = req.headers['authorization'] as string;
-    const accessToken = accessTokenHeader.split(' ')[1];
+    const refreshToken = req.headers["x-refresh-token"] as string;
+    const accessTokenHeader = req.headers["authorization"] as string;
+    const accessToken = accessTokenHeader.split(" ")[1];
     memcached.del(refreshToken);
     memcached.del(accessToken);
     return res.status(200).json({
-      status: 'success',
-      message: 'logged out',
+      status: "success",
+      message: "logged out",
     } satisfies SuccessResponse);
   } catch (error) {
     next(error);
@@ -261,12 +261,12 @@ const logout: RequestHandler = async (req, res, next) => {
 };
 
 const checkSession: RequestHandler = async (req, res) => {
-  const refreshToken = req.headers['x-refresh-token'] as string;
-  const accessTokenHeader = req.headers['authorization'] as string;
-  const accessToken = accessTokenHeader.split(' ')[1];
+  const refreshToken = req.headers["x-refresh-token"] as string;
+  const accessTokenHeader = req.headers["authorization"] as string;
+  const accessToken = accessTokenHeader.split(" ")[1];
   return res.status(200).json({
-    status: 'success',
-    message: 'session ok!',
+    status: "success",
+    message: "session ok!",
     datas: [
       {
         refreshToken,

@@ -1,25 +1,25 @@
-import { AuthErrorMessages } from '@src/helpers/AuthHelpers.js';
-import { ErrorResponse } from '@src/helpers/HandlerHelpers.js';
-import { JsonWebTokenError, TokenExpiredError, jwtPromisified } from '@src/helpers/JwtHelpers.js';
-import { MemcachedMethodError, memcached } from '@src/helpers/MemcachedHelpers.js';
-import { RequestHandler } from 'express';
-import * as z from 'zod';
+import { AuthErrorMessages } from "@src/helpers/AuthHelpers.js";
+import { ErrorResponse } from "@src/helpers/HandlerHelpers.js";
+import { JsonWebTokenError, TokenExpiredError, jwtPromisified } from "@src/helpers/JwtHelpers.js";
+import { MemcachedMethodError, memcached } from "@src/helpers/MemcachedHelpers.js";
+import { RequestHandler } from "express";
+import * as z from "zod";
 
 export const checkAccessToken: RequestHandler = async (req, res, next) => {
   try {
     // check access token presence in header
-    const accessTokenHeader = z.string().safeParse(req.headers['authorization']);
+    const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
     if (!accessTokenHeader.success) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
-    const accessToken = accessTokenHeader.data.split(' ')[1];
+    const accessToken = accessTokenHeader.data.split(" ")[1];
     if (!accessToken) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
 
     // verify access token
-    await jwtPromisified.verify('ACCESS_TOKEN', accessToken);
+    await jwtPromisified.verify("ACCESS_TOKEN", accessToken);
 
     // check access token presence in session cache store
     const checkResult = (await memcached.get(accessToken)).message;
     // console.log('🚀 > checkAccessToken > checkResult:', checkResult);
-    if (checkResult !== 'cache hit') {
+    if (checkResult !== "cache hit") {
       throw new Error(AuthErrorMessages.ACCESS_TOKEN_EXPIRED);
     }
 
@@ -29,11 +29,11 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
     // catch expired access token error
     if (
       (error instanceof Error && error.message === AuthErrorMessages.ACCESS_TOKEN_EXPIRED) ||
-      (error instanceof MemcachedMethodError && error.message === 'cache miss') ||
+      (error instanceof MemcachedMethodError && error.message === "cache miss") ||
       error instanceof TokenExpiredError
     ) {
       return res.status(401).json({
-        status: 'error',
+        status: "error",
         message: AuthErrorMessages.ACCESS_TOKEN_EXPIRED,
       } satisfies ErrorResponse);
     }
@@ -44,7 +44,7 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
       error instanceof JsonWebTokenError
     ) {
       return res.status(401).json({
-        status: 'error',
+        status: "error",
         message: AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE,
       } satisfies ErrorResponse);
     }
@@ -57,17 +57,17 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
 export const checkRefreshToken: RequestHandler = async (req, res, next) => {
   try {
     // check refresh token presence in header
-    const refreshTokenHeader = z.string().safeParse(req.headers['x-refresh-token']);
+    const refreshTokenHeader = z.string().safeParse(req.headers["x-refresh-token"]);
     if (!refreshTokenHeader.success) throw new Error(AuthErrorMessages.REFRESH_TOKEN_NOT_VALID_MESSAGE);
     const refreshToken = refreshTokenHeader.data;
 
     // verify refresh token
-    await jwtPromisified.verify('REFRESH_TOKEN', refreshToken);
+    await jwtPromisified.verify("REFRESH_TOKEN", refreshToken);
 
     // check refresh token presence in session cache store
     const checkResult = (await memcached.get(refreshToken)).message;
     // console.log('🚀 > checkRefreshToken > checkResult:', checkResult);
-    if (checkResult !== 'cache hit') {
+    if (checkResult !== "cache hit") {
       throw new Error(AuthErrorMessages.REFRESH_TOKEN_EXPIRED);
     }
 
@@ -77,11 +77,11 @@ export const checkRefreshToken: RequestHandler = async (req, res, next) => {
     // catch expired refresh token error
     if (
       (error instanceof Error && error.message === AuthErrorMessages.REFRESH_TOKEN_EXPIRED) ||
-      (error instanceof MemcachedMethodError && error.message === 'cache miss') ||
+      (error instanceof MemcachedMethodError && error.message === "cache miss") ||
       error instanceof TokenExpiredError
     ) {
       return res.status(401).json({
-        status: 'error',
+        status: "error",
         message: AuthErrorMessages.REFRESH_TOKEN_EXPIRED,
       } satisfies ErrorResponse);
     }
@@ -92,7 +92,7 @@ export const checkRefreshToken: RequestHandler = async (req, res, next) => {
       error instanceof JsonWebTokenError
     ) {
       return res.status(401).json({
-        status: 'error',
+        status: "error",
         message: AuthErrorMessages.REFRESH_TOKEN_NOT_VALID_MESSAGE,
       } satisfies ErrorResponse);
     }

@@ -4,21 +4,21 @@ import {
   REFRESH_TOKEN_SECRET,
   accessTokenConfig,
   refreshTokenConfig,
-} from '@src/configs/JwtConfigs.js';
-import jwt from 'jsonwebtoken';
+} from "@src/configs/JwtConfigs.js";
+import jwt from "jsonwebtoken";
 
-const sign = async (tokenType: 'REFRESH_TOKEN' | 'ACCESS_TOKEN', initialPayload: JWTPayload) => {
+const sign = async (tokenType: "REFRESH_TOKEN" | "ACCESS_TOKEN", initialPayload: JWTPayload) => {
   let config: jwt.SignOptions;
   let secret: jwt.Secret;
-  if (tokenType === 'ACCESS_TOKEN') {
+  if (tokenType === "ACCESS_TOKEN") {
     config = accessTokenConfig;
     secret = ACCESS_TOKEN_SECRET;
-  } else if (tokenType === 'REFRESH_TOKEN') {
+  } else if (tokenType === "REFRESH_TOKEN") {
     config = refreshTokenConfig;
     secret = REFRESH_TOKEN_SECRET;
   } else {
     return new Promise<string>((_resolve, reject) => {
-      reject('valid token type not supplied');
+      reject("valid token type not supplied");
     });
   }
   return new Promise<string>((resolve, reject) => {
@@ -26,24 +26,24 @@ const sign = async (tokenType: 'REFRESH_TOKEN' | 'ACCESS_TOKEN', initialPayload:
       if (error) {
         reject(error);
       } else {
-        resolve(token ?? 'error');
+        resolve(token ?? "error");
       }
     });
   });
 };
 
-const verify = async (tokenType: 'REFRESH_TOKEN' | 'ACCESS_TOKEN', token: string) => {
+const verify = async (tokenType: "REFRESH_TOKEN" | "ACCESS_TOKEN", token: string) => {
   let config: jwt.VerifyOptions;
   let secret: jwt.Secret;
-  if (tokenType === 'ACCESS_TOKEN') {
+  if (tokenType === "ACCESS_TOKEN") {
     config = accessTokenConfig;
     secret = ACCESS_TOKEN_SECRET;
-  } else if (tokenType === 'REFRESH_TOKEN') {
+  } else if (tokenType === "REFRESH_TOKEN") {
     config = refreshTokenConfig;
     secret = REFRESH_TOKEN_SECRET;
   } else {
     return new Promise<string>((_resolve, reject) => {
-      reject('valid token type not supplied');
+      reject("valid token type not supplied");
     });
   }
   return new Promise<JWTPayload>((resolve, reject) => {
