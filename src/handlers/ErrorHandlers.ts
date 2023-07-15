@@ -3,6 +3,7 @@ import { JsonWebTokenError } from "@src/helpers/JwtHelpers.js";
 import { MemcachedMethodError } from "@src/helpers/MemcachedHelpers.js";
 import { isPrismaError } from "@src/helpers/PrismaHelpers.js";
 import { ErrorRequestHandler, Request, Response } from "express";
+import { ZodError } from "zod";
 
 type ArbitraryObject = { [key: string]: unknown };
 
@@ -30,6 +31,16 @@ const errorHandler: ErrorRequestHandler = (
 ) => {
   // set response status code to 500
   res.status(500);
+
+  // catch zod error
+  if (error instanceof ZodError) {
+    logError(`${req.path} > zod error`, error, true);
+    return res.json({
+      status: "error",
+      message: "internal zod error",
+      errors: [error],
+    } satisfies ErrorResponse);
+  }
 
   // catch memcached error
   if (error instanceof MemcachedMethodError) {
