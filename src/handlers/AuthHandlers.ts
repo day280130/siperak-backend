@@ -56,9 +56,9 @@ const register: RequestHandler = async (req, res, next) => {
       .set(`user:${insertResult.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
       .catch(error => {
         if (error instanceof MemcachedMethodError) {
-          logError(`${req.path} > memcached user set`, error, true);
+          logError(`${req.path} > register handler`, error, true);
         } else {
-          logError(`${req.path} > memcached user set`, error, false);
+          logError(`${req.path} > register handler`, error, false);
         }
       });
 
@@ -66,13 +66,13 @@ const register: RequestHandler = async (req, res, next) => {
     const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", safeUserData);
 
     // store refresh token as long session key in cache
-    memcached.set(refreshToken, safeUserData.id, cacheDuration.super);
+    await memcached.set(refreshToken, safeUserData.id, cacheDuration.super);
 
     // generate access token
     const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
 
     // store access token as short session key in cache
-    memcached.set(accessToken, safeUserData.id, cacheDuration.medium);
+    await memcached.set(accessToken, safeUserData.id, cacheDuration.medium);
 
     // send created user and access token via response payload
     return res.status(201).json({
@@ -134,9 +134,9 @@ const login: RequestHandler = async (req, res, next) => {
       .set(`user:${user.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
       .catch(error => {
         if (error instanceof MemcachedMethodError) {
-          logError(`${req.path} > memcached user set`, error, true);
+          logError(`${req.path} > login handler`, error, true);
         } else {
-          logError(`${req.path} > memcached user set`, error, false);
+          logError(`${req.path} > login handler`, error, false);
         }
       });
 
@@ -150,31 +150,27 @@ const login: RequestHandler = async (req, res, next) => {
     }
 
     // store created user to cache (potential non-harmful error)
-    try {
-      await memcached.set(
-        `user:${user.id}`,
-        JSON.stringify(userSafeNoIDSchema.parse(safeUserData)),
-        cacheDuration.short
-      );
-    } catch (error) {
-      if (error instanceof MemcachedMethodError) {
-        logError(`${req.path} > memcached user set`, error, true);
-      } else {
-        logError(`${req.path} > memcached user set`, error, false);
-      }
-    }
+    memcached
+      .set(`user:${user.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
+      .catch(error => {
+        if (error instanceof MemcachedMethodError) {
+          logError(`${req.path} > login handler`, error, true);
+        } else {
+          logError(`${req.path} > login handler`, error, false);
+        }
+      });
 
     // generate refresh token
     const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", safeUserData);
 
     // store refresh token as long session key in cache
-    memcached.set(refreshToken, user.id, cacheDuration.super);
+    await memcached.set(refreshToken, user.id, cacheDuration.super);
 
     // generate access token
     const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
 
     // store refresh token as long session key in cache
-    memcached.set(accessToken, user.id, cacheDuration.super);
+    await memcached.set(accessToken, user.id, cacheDuration.super);
 
     // send logged in user data and access token via response payload
     return res.status(200).json({
@@ -200,7 +196,7 @@ const refresh: RequestHandler = async (req, res, next) => {
       const oldAccessToken = oldAccessTokenHeader.data.split(" ")[1];
 
       // invalidate old access token from session cache store if not expired yet
-      memcached.del(oldAccessToken);
+      memcached.del(oldAccessToken).catch(error => logError(`${req.path} > refresh handler`, error));
     }
 
     // get refresh token from header
@@ -213,7 +209,7 @@ const refresh: RequestHandler = async (req, res, next) => {
     const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", { id, email, name, role });
 
     // store new access token as short session key in cache
-    memcached.set(accessToken, id, cacheDuration.medium);
+    await memcached.set(accessToken, id, cacheDuration.medium);
 
     // send new csrf token and access token via response payload
     return res.status(200).json({
@@ -232,14 +228,15 @@ const logout: RequestHandler = async (req, res, next) => {
     // get refresh token from header if any
     const refreshTokenHeader = z.string().safeParse(req.headers["x-refresh-token"]);
     // invalidate refresh token
-    if (refreshTokenHeader.success) memcached.del(refreshTokenHeader.data);
+    if (refreshTokenHeader.success)
+      memcached.del(refreshTokenHeader.data).catch(error => logError(`${req.path} > logout handler`, error));
 
     // get old access token from header if any
     const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
     if (accessTokenHeader.success) {
       // invalidate access token
       const accessToken = accessTokenHeader.data.split(" ")[1];
-      memcached.del(accessToken);
+      memcached.del(accessToken).catch(error => logError(`${req.path} > logout handler`, error));
     }
 
     // send success response

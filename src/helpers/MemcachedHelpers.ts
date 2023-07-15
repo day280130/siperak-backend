@@ -1,4 +1,5 @@
-import { memcachedDefault } from "@src/configs/MemcachedConfigs.js";
+import { cacheDuration, memcachedDefault } from "@src/configs/MemcachedConfigs.js";
+import * as z from "zod";
 
 export class MemcachedMethodError extends Error {
   private _reason;
@@ -80,3 +81,40 @@ const del = async (key: string) =>
  * created by : Dimas
  */
 export const memcached = { set, get, touch, del };
+
+export const registerCachedQueryKeys = async (field: "user", cacheKey: string) => {
+  // get current cached query key list
+  let cachedQueryKeys: string;
+  try {
+    cachedQueryKeys = (await memcached.get<string>(`${field}:queries`)).result;
+  } catch (e) {
+    cachedQueryKeys = "[]";
+  }
+  const cachedQueryKeysArr = JSON.parse(cachedQueryKeys);
+
+  // push the new cached query key
+  cachedQueryKeysArr.push(cacheKey);
+  console.log(cachedQueryKeysArr);
+
+  // put the list back to cache
+  memcached.set(`${field}:queries`, JSON.stringify(cachedQueryKeysArr), cacheDuration.super).catch();
+};
+
+export const invalidateCachedQueries = async (field: "user") => {
+  // get current cached query key list
+  let cachedQueryKeys: string;
+  try {
+    cachedQueryKeys = (await memcached.get<string>(`${field}:queries`)).result;
+  } catch (e) {
+    return;
+  }
+  const cachedQueryKeysArr = z.array(z.string()).min(1).safeParse(JSON.parse(cachedQueryKeys));
+  console.log(cachedQueryKeysArr);
+  if (!cachedQueryKeysArr.success) return;
+
+  // loop through the array and delete each cached query
+  cachedQueryKeysArr.data.forEach(cachedQueryKey => memcached.del(cachedQueryKey));
+
+  // delete cached query key list
+  memcached.del(`${field}:queries`).catch();
+};
