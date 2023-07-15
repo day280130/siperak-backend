@@ -112,7 +112,7 @@ export const invalidateCachedQueries = async (field: "user") => {
     return;
   }
   const cachedQueryKeysArr = z.array(z.string()).min(1).safeParse(JSON.parse(cachedQueryKeys));
-  console.log(cachedQueryKeysArr);
+  // console.log(cachedQueryKeysArr);
   if (!cachedQueryKeysArr.success) return;
 
   // loop through the array and delete each cached query
