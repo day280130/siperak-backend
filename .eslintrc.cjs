@@ -20,7 +20,7 @@ module.exports = {
       "warn",
       {
         ignoreRestSiblings: true,
-        varsIgnorePattern: "^_.*",
+        destructuredArrayIgnorePattern: "^_.*",
         argsIgnorePattern: "^_.*",
         caughtErrors: "none",
       },
