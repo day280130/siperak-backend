@@ -48,19 +48,19 @@ const register: RequestHandler = async (req, res, next) => {
     });
 
     // store created user to cache (potential non-harmful error)
-    try {
-      await memcached.set(
+    memcached
+      .set(
         `user:${insertResult.id}`,
         JSON.stringify({ email: insertResult.email, name: insertResult.name, role: insertResult.role }),
         cacheDuration.short
-      );
-    } catch (error) {
-      if (error instanceof MemcachedMethodError) {
-        logError(`${req.path} > memcached user set`, error, true);
-      } else {
-        logError(`${req.path} > memcached user set`, error, false);
-      }
-    }
+      )
+      .catch(error => {
+        if (error instanceof MemcachedMethodError) {
+          logError(`${req.path} > memcached user set`, error, true);
+        } else {
+          logError(`${req.path} > memcached user set`, error, false);
+        }
+      });
 
     // generate refresh token
     const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", {
