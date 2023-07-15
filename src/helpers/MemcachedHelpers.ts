@@ -1,4 +1,5 @@
 import { cacheDuration, memcachedDefault } from "@src/configs/MemcachedConfigs.js";
+import { logError } from "@src/helpers/HandlerHelpers.js";
 import * as z from "zod";
 
 export class MemcachedMethodError extends Error {
@@ -97,7 +98,9 @@ export const registerCachedQueryKeys = async (field: "user", cacheKey: string) =
   console.log(cachedQueryKeysArr);
 
   // put the list back to cache
-  memcached.set(`${field}:queries`, JSON.stringify(cachedQueryKeysArr), cacheDuration.super).catch();
+  memcached
+    .set(`${field}:queries`, JSON.stringify(cachedQueryKeysArr), cacheDuration.super)
+    .catch(error => logError("register cached query keys", error));
 };
 
 export const invalidateCachedQueries = async (field: "user") => {
@@ -116,5 +119,5 @@ export const invalidateCachedQueries = async (field: "user") => {
   cachedQueryKeysArr.data.forEach(cachedQueryKey => memcached.del(cachedQueryKey));
 
   // delete cached query key list
-  memcached.del(`${field}:queries`).catch();
+  memcached.del(`${field}:queries`).catch(error => logError("invalidate cached queries", error));
 };
