@@ -6,6 +6,7 @@ import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelper
 import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
 import { BinaryLike, scrypt } from "crypto";
 import { RequestHandler } from "express";
+import * as z from "zod";
 
 const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen: number) =>
   new Promise<Buffer>((resolve, reject) => {
@@ -198,7 +199,7 @@ const login: RequestHandler = async (req, res, next) => {
 const refresh: RequestHandler = async (req, res, next) => {
   try {
     // get old access token from header if any
-    const oldAccessTokenHeader = req.headers["authorization"] as string;
+    const oldAccessTokenHeader = z.string().parse(req.headers["authorization"]);
     if (oldAccessTokenHeader && oldAccessTokenHeader.split(" ").length > 1) {
       const oldAccessToken = oldAccessTokenHeader.split(" ")[1];
 
@@ -207,7 +208,7 @@ const refresh: RequestHandler = async (req, res, next) => {
     }
 
     // get refresh token from header
-    const refreshToken = req.headers["x-refresh-token"] as string;
+    const refreshToken = z.string().parse(req.headers["x-refresh-token"]);
 
     // get user data from refresh token
     const { id, email, name, role } = await jwtPromisified.decode(refreshToken);
@@ -233,10 +234,10 @@ const refresh: RequestHandler = async (req, res, next) => {
 const logout: RequestHandler = async (req, res, next) => {
   try {
     // get refresh token from header
-    const refreshToken = req.headers["x-refresh-token"] as string;
+    const refreshToken = z.string().parse(req.headers["x-refresh-token"]);
 
     // get old access token from header
-    const accessTokenHeader = req.headers["authorization"] as string;
+    const accessTokenHeader = z.string().parse(req.headers["authorization"]);
     const accessToken = accessTokenHeader.split(" ")[1];
 
     // invalidate refresh token
@@ -256,8 +257,8 @@ const logout: RequestHandler = async (req, res, next) => {
 };
 
 const checkSession: RequestHandler = async (req, res) => {
-  const refreshToken = req.headers["x-refresh-token"] as string;
-  const accessTokenHeader = req.headers["authorization"] as string;
+  const refreshToken = z.string().parse(req.headers["x-refresh-token"]);
+  const accessTokenHeader = z.string().parse(req.headers["authorization"]);
   const accessToken = accessTokenHeader.split(" ")[1];
   return res.status(200).json({
     status: "success",
