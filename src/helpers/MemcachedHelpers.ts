@@ -1,20 +1,25 @@
 import { memcachedDefault } from "@src/configs/MemcachedConfigs.js";
 
 export class MemcachedMethodError extends Error {
-  public reason;
+  private _reason;
+
   constructor(message: "internal error" | "cache miss", reason: unknown) {
     super(message);
-    this.reason = reason;
+    this._reason = reason;
+  }
+
+  get reason() {
+    return this._reason;
   }
 }
 
-type MemcachedMethodSuccess = {
+type MemcachedMethodSuccess<T = unknown> = {
   message: string;
-  result?: unknown;
+  result: T;
 };
 
 const set = async (key: string, value: string | Buffer, lifetime: number) =>
-  new Promise<MemcachedMethodSuccess>((resolve, reject) => {
+  new Promise<MemcachedMethodSuccess<boolean>>((resolve, reject) => {
     memcachedDefault.set(key, value, lifetime, (err, result) => {
       if (err) {
         reject(new MemcachedMethodError("internal error", err));
@@ -27,8 +32,8 @@ const set = async (key: string, value: string | Buffer, lifetime: number) =>
     });
   });
 
-const get = async (key: string) =>
-  new Promise<MemcachedMethodSuccess>((resolve, reject) => {
+const get = async <T>(key: string) =>
+  new Promise<MemcachedMethodSuccess<T>>((resolve, reject) => {
     memcachedDefault.get(key, (err, data) => {
       if (err) {
         reject(new MemcachedMethodError("internal error", err));
@@ -57,7 +62,7 @@ const touch = async (key: string, lifetime: number) =>
   });
 
 const del = async (key: string) =>
-  new Promise<MemcachedMethodSuccess>((resolve, reject) => {
+  new Promise<MemcachedMethodSuccess<boolean>>((resolve, reject) => {
     memcachedDefault.del(key, (err, result) => {
       if (err) {
         reject(new MemcachedMethodError("internal error", err));
