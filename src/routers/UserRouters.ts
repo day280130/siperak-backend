@@ -5,4 +5,5 @@ import { Router } from "express";
 export const userRouters = Router();
 
 const BASE_ROUTE = "/users";
+userRouters.get(`${BASE_ROUTE}`, checkAccessToken, userHandlers.getUsersData);
 userRouters.get(`${BASE_ROUTE}/:id`, checkAccessToken, userHandlers.getUserData);
