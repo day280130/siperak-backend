@@ -13,8 +13,8 @@ export class MemcachedMethodError extends Error {
   }
 }
 
-type MemcachedMethodSuccess<T = unknown> = {
-  message: string;
+type MemcachedMethodSuccess<T = unknown, M = string> = {
+  message: M;
   result: T;
 };
 
@@ -33,7 +33,7 @@ const set = async (key: string, value: string | Buffer, lifetime: number) =>
   });
 
 const get = async <T>(key: string) =>
-  new Promise<MemcachedMethodSuccess<T>>((resolve, reject) => {
+  new Promise<MemcachedMethodSuccess<T, "cache hit">>((resolve, reject) => {
     memcachedDefault.get(key, (err, data) => {
       if (err) {
         reject(new MemcachedMethodError("internal error", err));

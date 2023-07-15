@@ -1,4 +1,4 @@
-import { UserSafeSchema } from "@src/schemas/UserSchema.js";
+import { UserSafeData } from "@src/schemas/UserSchema.js";
 import { JwtPayload, VerifyOptions, SignOptions } from "jsonwebtoken";
 
 export const accessTokenConfig: SignOptions = {
@@ -19,7 +19,7 @@ export const refreshTokenVerifyConfig: VerifyOptions = {
   algorithms: ["HS512"],
 };
 
-export type JWTPayload = JwtPayload & UserSafeSchema;
+export type JWTPayload = JwtPayload & UserSafeData;
 
 export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "super secret access token";
 export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "super secret refresh token";
