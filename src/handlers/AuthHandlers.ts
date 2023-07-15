@@ -48,6 +48,7 @@ const register: RequestHandler = async (req, res, next) => {
     });
 
     // store created user to cache (potential non-harmful error)
+    // in case data want to be accessed in further request
     memcached
       .set(
         `user:${insertResult.id}`,
@@ -141,6 +142,22 @@ const login: RequestHandler = async (req, res, next) => {
         message: "email or password is wrong",
       } satisfies ErrorResponse);
     }
+
+    // store found user to cache (potential non-harmful error)
+    // in case data want to be accessed in further request
+    memcached
+      .set(
+        `user:${user.id}`,
+        JSON.stringify({ email: user.email, name: user.name, role: user.role }),
+        cacheDuration.short
+      )
+      .catch(error => {
+        if (error instanceof MemcachedMethodError) {
+          logError(`${req.path} > memcached user set`, error, true);
+        } else {
+          logError(`${req.path} > memcached user set`, error, false);
+        }
+      });
 
     // check password
     const hashedGivenPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
