@@ -199,9 +199,9 @@ const login: RequestHandler = async (req, res, next) => {
 const refresh: RequestHandler = async (req, res, next) => {
   try {
     // get old access token from header if any
-    const oldAccessTokenHeader = z.string().parse(req.headers["authorization"]);
-    if (oldAccessTokenHeader && oldAccessTokenHeader.split(" ").length > 1) {
-      const oldAccessToken = oldAccessTokenHeader.split(" ")[1];
+    const oldAccessTokenHeader = z.string().safeParse(req.headers["authorization"]);
+    if (oldAccessTokenHeader.success && oldAccessTokenHeader.data.split(" ").length > 1) {
+      const oldAccessToken = oldAccessTokenHeader.data.split(" ")[1];
 
       // invalidate old access token from session cache store if not expired yet
       memcached.del(oldAccessToken);
@@ -233,18 +233,18 @@ const refresh: RequestHandler = async (req, res, next) => {
 
 const logout: RequestHandler = async (req, res, next) => {
   try {
-    // get refresh token from header
-    const refreshToken = z.string().parse(req.headers["x-refresh-token"]);
-
-    // get old access token from header
-    const accessTokenHeader = z.string().parse(req.headers["authorization"]);
-    const accessToken = accessTokenHeader.split(" ")[1];
-
+    // get refresh token from header if any
+    const refreshTokenHeader = z.string().safeParse(req.headers["x-refresh-token"]);
     // invalidate refresh token
-    memcached.del(refreshToken);
+    if (refreshTokenHeader.success) memcached.del(refreshTokenHeader.data);
 
-    // invalidate access token
-    memcached.del(accessToken);
+    // get old access token from header if any
+    const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
+    if (accessTokenHeader.success) {
+      // invalidate access token
+      const accessToken = accessTokenHeader.data.split(" ")[1];
+      memcached.del(accessToken);
+    }
 
     // send success response
     return res.status(200).json({
@@ -257,16 +257,15 @@ const logout: RequestHandler = async (req, res, next) => {
 };
 
 const checkSession: RequestHandler = async (req, res) => {
-  const refreshToken = z.string().parse(req.headers["x-refresh-token"]);
-  const accessTokenHeader = z.string().parse(req.headers["authorization"]);
-  const accessToken = accessTokenHeader.split(" ")[1];
+  const refreshToken = z.string().safeParse(req.headers["x-refresh-token"]);
+  const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
   return res.status(200).json({
     status: "success",
     message: "session ok!",
     datas: [
       {
-        refreshToken,
-        accessToken,
+        refreshToken: refreshToken.success ? refreshToken.data : "",
+        accessToken: accessTokenHeader.success ? accessTokenHeader.data.split(" ")[1] : "",
       },
     ],
   } satisfies SuccessResponse);
