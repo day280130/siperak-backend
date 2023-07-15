@@ -26,7 +26,6 @@ const errorHandler: ErrorRequestHandler = (
   error: NodeJS.ErrnoException | Error,
   req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next
 ) => {
   // set response status code to 500
