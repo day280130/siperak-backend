@@ -29,3 +29,15 @@ export const userSchema = z.object({
 });
 
 export type UserData = z.infer<typeof userSchema>;
+
+/**
+ * Schema for stripping password from user data
+ */
+export const userSafeSchema = userSchema.omit({ password: true });
+export type UserSafeSchema = z.infer<typeof userSafeSchema>;
+
+/**
+ * Schema for stripping password and id from user data
+ */
+export const userSafeNoIDSchema = userSchema.omit({ id: true, password: true });
+export type UserSafeNoIDSchema = z.infer<typeof userSafeNoIDSchema>;

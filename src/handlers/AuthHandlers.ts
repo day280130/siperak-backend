@@ -3,7 +3,7 @@ import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHe
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { MemcachedMethodError, memcached } from "@src/helpers/MemcachedHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
-import { userSchema } from "@src/schemas/UserSchema.js";
+import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
 import { BinaryLike, scrypt } from "crypto";
 import { RequestHandler } from "express";
 
@@ -47,14 +47,12 @@ const register: RequestHandler = async (req, res, next) => {
       },
     });
 
+    const safeUserData = userSafeSchema.parse(insertResult);
+
     // store created user to cache (potential non-harmful error)
     // in case data want to be accessed in further request
     memcached
-      .set(
-        `user:${insertResult.id}`,
-        JSON.stringify({ email: insertResult.email, name: insertResult.name, role: insertResult.role }),
-        cacheDuration.short
-      )
+      .set(`user:${insertResult.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
       .catch(error => {
         if (error instanceof MemcachedMethodError) {
           logError(`${req.path} > memcached user set`, error, true);
@@ -64,26 +62,16 @@ const register: RequestHandler = async (req, res, next) => {
       });
 
     // generate refresh token
-    const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", {
-      userId: insertResult.id,
-      userEmail: insertResult.email,
-      userName: insertResult.name,
-      userRole: insertResult.role,
-    });
+    const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", safeUserData);
 
     // store refresh token as long session key in cache
-    memcached.set(refreshToken, insertResult.id, cacheDuration.super);
+    memcached.set(refreshToken, safeUserData.id, cacheDuration.super);
 
     // generate access token
-    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", {
-      userId: insertResult.id,
-      userEmail: insertResult.email,
-      userName: insertResult.name,
-      userRole: insertResult.role,
-    });
+    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
 
     // store access token as short session key in cache
-    memcached.set(accessToken, insertResult.id, cacheDuration.medium);
+    memcached.set(accessToken, safeUserData.id, cacheDuration.medium);
 
     // send created user and access token via response payload
     return res.status(201).json({
@@ -91,10 +79,7 @@ const register: RequestHandler = async (req, res, next) => {
       message: "user created",
       datas: [
         {
-          id: insertResult.id,
-          email: insertResult.email,
-          name: insertResult.name,
-          role: insertResult.role,
+          ...safeUserData,
           refreshToken,
           accessToken,
         },
@@ -142,15 +127,12 @@ const login: RequestHandler = async (req, res, next) => {
         message: "email or password is wrong",
       } satisfies ErrorResponse);
     }
+    const safeUserData = userSafeSchema.parse(user);
 
     // store found user to cache (potential non-harmful error)
     // in case data want to be accessed in further request
     memcached
-      .set(
-        `user:${user.id}`,
-        JSON.stringify({ email: user.email, name: user.name, role: user.role }),
-        cacheDuration.short
-      )
+      .set(`user:${user.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
       .catch(error => {
         if (error instanceof MemcachedMethodError) {
           logError(`${req.path} > memcached user set`, error, true);
@@ -172,7 +154,7 @@ const login: RequestHandler = async (req, res, next) => {
     try {
       await memcached.set(
         `user:${user.id}`,
-        JSON.stringify({ email: user.email, name: user.name, role: user.role }),
+        JSON.stringify(userSafeNoIDSchema.parse(safeUserData)),
         cacheDuration.short
       );
     } catch (error) {
@@ -184,23 +166,13 @@ const login: RequestHandler = async (req, res, next) => {
     }
 
     // generate refresh token
-    const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", {
-      userId: user.id,
-      userEmail: user.email,
-      userName: user.name,
-      userRole: user.role,
-    });
+    const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", safeUserData);
 
     // store refresh token as long session key in cache
     memcached.set(refreshToken, user.id, cacheDuration.super);
 
     // generate access token
-    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", {
-      userId: user.id,
-      userEmail: user.email,
-      userName: user.name,
-      userRole: user.role,
-    });
+    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
 
     // store refresh token as long session key in cache
     memcached.set(accessToken, user.id, cacheDuration.super);
@@ -211,10 +183,7 @@ const login: RequestHandler = async (req, res, next) => {
       message: "logged in",
       datas: [
         {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
+          ...safeUserData,
           refreshToken,
           accessToken,
         },
@@ -241,19 +210,19 @@ const refresh: RequestHandler = async (req, res, next) => {
     const refreshToken = req.headers["x-refresh-token"] as string;
 
     // get user data from refresh token
-    const { userEmail, userId, userName, userRole } = await jwtPromisified.decode(refreshToken);
+    const { id, email, name, role } = await jwtPromisified.decode(refreshToken);
 
     // generate new access token
-    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", { userEmail, userId, userName, userRole });
+    const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", { id, email, name, role });
 
     // store new access token as short session key in cache
-    memcached.set(accessToken, userId, cacheDuration.medium);
+    memcached.set(accessToken, id, cacheDuration.medium);
 
     // send new csrf token and access token via response payload
     return res.status(200).json({
       status: "success",
       message: "new access token generated",
-      datas: [{ id: userId, accessToken }],
+      datas: [{ id, accessToken }],
     } satisfies SuccessResponse);
   } catch (error) {
     // pass internal error to global error handler

@@ -15,11 +15,10 @@ const getUserData: RequestHandler = async (req, res, next) => {
         message: "no valid id provided",
       } satisfies ErrorResponse);
     }
-    const { id } = parsedParams.data;
 
     const userData = await prisma.user.findFirst({
       where: {
-        id,
+        id: parsedParams.data.id,
       },
     });
 
