@@ -1,13 +1,13 @@
 export type ErrorResponse = {
   status: "error";
   message: string;
-  errors?: unknown[];
+  errors?: unknown;
 };
 
 export type SuccessResponse = {
   status: "success";
   message: string;
-  datas?: unknown[];
+  datas?: unknown;
 };
 
 export const logError = (location: string, error: unknown, known: boolean | "unset" = "unset") => {

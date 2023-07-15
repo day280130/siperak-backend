@@ -78,13 +78,11 @@ const register: RequestHandler = async (req, res, next) => {
     return res.status(201).json({
       status: "success",
       message: "user created",
-      datas: [
-        {
-          ...safeUserData,
-          refreshToken,
-          accessToken,
-        },
-      ],
+      datas: {
+        ...safeUserData,
+        refreshToken,
+        accessToken,
+      },
     } satisfies SuccessResponse);
   } catch (error) {
     // catch register unique email violation
@@ -182,13 +180,11 @@ const login: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "logged in",
-      datas: [
-        {
-          ...safeUserData,
-          refreshToken,
-          accessToken,
-        },
-      ],
+      datas: {
+        ...safeUserData,
+        refreshToken,
+        accessToken,
+      },
     } satisfies SuccessResponse);
   } catch (error) {
     // pass internal error to global error handler
@@ -223,7 +219,7 @@ const refresh: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "new access token generated",
-      datas: [{ id, accessToken }],
+      datas: { id, accessToken },
     } satisfies SuccessResponse);
   } catch (error) {
     // pass internal error to global error handler
@@ -262,12 +258,10 @@ const checkSession: RequestHandler = async (req, res) => {
   return res.status(200).json({
     status: "success",
     message: "session ok!",
-    datas: [
-      {
-        refreshToken: refreshToken.success ? refreshToken.data : "",
-        accessToken: accessTokenHeader.success ? accessTokenHeader.data.split(" ")[1] : "",
-      },
-    ],
+    datas: {
+      refreshToken: refreshToken.success ? refreshToken.data : "",
+      accessToken: accessTokenHeader.success ? accessTokenHeader.data.split(" ")[1] : "",
+    },
   } satisfies SuccessResponse);
 };
 
