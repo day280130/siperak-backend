@@ -1,6 +1,5 @@
 import { UserSafeSchema } from "@src/schemas/UserSchema.js";
-import { JwtPayload, VerifyOptions } from "jsonwebtoken";
-import { SignOptions } from "jsonwebtoken";
+import { JwtPayload, VerifyOptions, SignOptions } from "jsonwebtoken";
 
 export const accessTokenConfig: SignOptions = {
   algorithm: "HS256",
