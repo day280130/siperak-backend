@@ -246,11 +246,20 @@ const refresh: RequestHandler = async (req, res, next) => {
 
 const logout: RequestHandler = async (req, res, next) => {
   try {
+    // get refresh token from header
     const refreshToken = req.headers["x-refresh-token"] as string;
+
+    // get old access token from header
     const accessTokenHeader = req.headers["authorization"] as string;
     const accessToken = accessTokenHeader.split(" ")[1];
+
+    // invalidate refresh token
     memcached.del(refreshToken);
+
+    // invalidate access token
     memcached.del(accessToken);
+
+    // send success response
     return res.status(200).json({
       status: "success",
       message: "logged out",
