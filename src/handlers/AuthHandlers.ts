@@ -3,23 +3,10 @@ import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHe
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { MemcachedMethodError, memcached } from "@src/helpers/MemcachedHelpers.js";
 import { prisma } from "@src/helpers/PrismaHelpers.js";
+import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
-import { BinaryLike, scrypt } from "crypto";
 import { RequestHandler } from "express";
 import * as z from "zod";
-
-const scryptPromisified = async (password: BinaryLike, salt: BinaryLike, keylen: number) =>
-  new Promise<Buffer>((resolve, reject) => {
-    scrypt(password, salt, keylen, (error, derivedKey) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(derivedKey);
-      }
-    });
-  });
-
-const PASSWORD_SECRET = process.env.PASSWORD_SECRET || "super secret password";
 
 const userInputSchema = userSchema.omit({ id: true, role: true });
 
