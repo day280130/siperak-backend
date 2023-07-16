@@ -179,7 +179,7 @@ const refresh: RequestHandler = async (req, res, next) => {
   try {
     // get old access token from header if any
     const oldAccessTokenHeader = z.string().safeParse(req.headers["authorization"]);
-    if (oldAccessTokenHeader.success && oldAccessTokenHeader.data.split(" ").length > 1) {
+    if (oldAccessTokenHeader.success && oldAccessTokenHeader.data.split(" ").length === 2) {
       const oldAccessToken = oldAccessTokenHeader.data.split(" ")[1];
 
       // invalidate old access token from session cache store if not expired yet
