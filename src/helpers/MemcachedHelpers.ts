@@ -116,7 +116,7 @@ export const invalidateCachedQueries = async (field: "user") => {
   if (!cachedQueryKeysArr.success) return;
 
   // loop through the array and delete each cached query
-  cachedQueryKeysArr.data.forEach(cachedQueryKey => memcached.del(cachedQueryKey));
+  cachedQueryKeysArr.data.forEach(cachedQueryKey => memcached.del(cachedQueryKey).catch());
 
   // delete cached query key list
   memcached.del(`${field}:queries`).catch(error => logError("invalidate cached queries", error));
