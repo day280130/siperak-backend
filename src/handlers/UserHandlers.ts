@@ -12,7 +12,7 @@ const userQuerySchema = z.object({
   name: z.string().optional(),
   email: z.string().optional(),
   role: userSafeSchema.shape.role.optional(),
-  orderBy: z.enum(["name", "email", "role", "created_at"]).default("created_at"),
+  order_by: z.enum(["name", "email", "role", "created_at"]).default("created_at"),
   sort: z.enum(["asc", "desc"]).default("desc"),
   page: z.coerce.number().gte(0).default(0),
   limit: z.coerce.number().gte(1).lte(50).default(2),
@@ -48,12 +48,12 @@ const getUsersData: RequestHandler = async (req, res, next) => {
       } satisfies ErrorResponse);
 
     // get underscored query value
-    const { orderBy, ...restQueries } = parsedQueries.data;
+    const { order_by, ...restQueries } = parsedQueries.data;
     // and turn it into camelCase
-    const cameledOrderBy = camelized(orderBy);
+    const cameledOrderBy = camelized(order_by);
 
     // form cache key for caching
-    const cacheKey = `user:${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${orderBy}:${
+    const cacheKey = `user:${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${order_by}:${
       restQueries.sort
     }:${restQueries.page}:${restQueries.limit}`;
     // check if the same user query already cached
