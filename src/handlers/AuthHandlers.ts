@@ -95,7 +95,9 @@ const login: RequestHandler = async (req, res, next) => {
     if (!parsedBody.success) {
       return res.status(400).json({
         status: "error",
-        message: "request body not valid",
+        message: `request body not valid > ${parsedBody.error.issues
+          .map(issue => `${issue.path.join(",")}:${issue.message}`)
+          .join("|")}`,
       } satisfies ErrorResponse);
     }
     const { email, password } = parsedBody.data;
