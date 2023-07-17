@@ -10,7 +10,14 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
     // check access token presence in header
     const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
     if (!accessTokenHeader.success) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
-    const accessToken = accessTokenHeader.data.split(" ")[1];
+    const authorizationStrings = accessTokenHeader.data.split(" ");
+
+    // check access token header string format
+    if (authorizationStrings[0].toLowerCase() !== "bearer")
+      throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
+
+    // get access token
+    const accessToken = authorizationStrings[1];
     if (!accessToken) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
 
     // verify access token
