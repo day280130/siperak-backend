@@ -348,7 +348,7 @@ const editUser: RequestHandler = async (req, res, next) => {
     const safeUpdatedUserData = userSafeSchema.parse(updateResult);
     return res.status(200).json({
       status: "success",
-      message: "user edited",
+      message: "user updated",
       datas: safeUpdatedUserData,
     } satisfies SuccessResponse);
   } catch (error) {
