@@ -10,3 +10,4 @@ userRouters.get(`${BASE_ROUTE}`, checkAccessToken, checkAdmin, userHandlers.getU
 userRouters.get(`${BASE_ROUTE}/:id`, checkAccessToken, userHandlers.getUserData);
 userRouters.post(`${BASE_ROUTE}`, checkAccessToken, checkAdmin, userHandlers.createUser);
 userRouters.put(`${BASE_ROUTE}/:id`, checkAccessToken, userHandlers.editUser);
+userRouters.delete(`${BASE_ROUTE}/:id`, checkAccessToken, checkAdmin, userHandlers.deleteUser);

@@ -367,9 +367,82 @@ const editUser: RequestHandler = async (req, res, next) => {
   }
 };
 
+const deleteUser: RequestHandler = async (req, res, next) => {
+  try {
+    // parse id from request param
+    const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
+
+    // send bad request if no valid params supplied
+    if (!paramId.success) {
+      return res.status(400).json({
+        status: "error",
+        message: "no valid id provided",
+      } satisfies ErrorResponse);
+    }
+
+    // get user data
+    let inputtedUserData;
+    // check if requested user data present in cache
+    const cacheKey = `user:${paramId.data.id}`;
+    try {
+      const cachedUserData = await memcached.get<string>(cacheKey);
+      // use it if present
+      console.log("getting from cache");
+      inputtedUserData = userSafeNoIDSchema.parse(JSON.parse(cachedUserData.result));
+    } catch (e) {
+      // get from db if not
+      inputtedUserData = await prisma.user.findFirst({
+        where: {
+          id: paramId.data.id,
+        },
+      });
+      // send not found if not present in db
+      console.log("getting from db");
+      if (!inputtedUserData) {
+        return res.status(404).json({
+          status: "error",
+          message: "user with given id not found",
+        } satisfies ErrorResponse);
+      }
+    }
+    const { role: inputtedRole } = inputtedUserData;
+
+    // check admin count in database
+    // (there must be at least one admin in user table)
+    if (inputtedRole === "ADMIN") {
+      const adminCount = await prisma.user.count({
+        where: {
+          role: "ADMIN",
+        },
+      });
+      if (adminCount <= 1)
+        return res.status(400).json({
+          status: "error",
+          message: "there must be at least one admin",
+        } satisfies ErrorResponse);
+    }
+
+    // delete user
+    await prisma.user.delete({
+      where: { id: paramId.data.id },
+    });
+
+    // invalidate cached datas of user queries
+    invalidateCachedQueries("user");
+
+    return res.status(200).json({
+      status: "success",
+      message: "user deleted",
+    } satisfies SuccessResponse);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const userHandlers = {
   getUsersData,
   getUserData,
   createUser,
   editUser,
+  deleteUser,
 };

@@ -21,7 +21,7 @@ export const checkAdmin: RequestHandler = async (req, res, next) => {
     if (role !== "ADMIN")
       return res.status(403).json({
         status: "error",
-        message: "admin role needed to access this resource",
+        message: "admin role needed to perform this task",
       } satisfies ErrorResponse);
 
     // all check pass
