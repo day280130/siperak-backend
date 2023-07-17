@@ -95,7 +95,7 @@ export const registerCachedQueryKeys = async (field: "user", cacheKey: string) =
 
   // push the new cached query key
   cachedQueryKeysArr.push(cacheKey);
-  console.log(cachedQueryKeysArr);
+  // console.log(cachedQueryKeysArr);
 
   // put the list back to cache
   memcached
