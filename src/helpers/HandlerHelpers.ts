@@ -1,7 +1,6 @@
 export type ErrorResponse = {
   status: "error";
   message: string;
-  errors?: unknown;
 };
 
 export type SuccessResponse = {

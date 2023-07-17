@@ -42,8 +42,9 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     if (!parsedQueries.success)
       return res.status(400).json({
         status: "error",
-        message: "invalid query shape detected",
-        errors: parsedQueries.error.issues,
+        message: `invalid query shape detected > ${parsedQueries.error.issues
+          .map(issue => `${issue.path.join(",")}:${issue.message}`)
+          .join("|")}`,
       } satisfies ErrorResponse);
 
     // get underscored query value
@@ -207,8 +208,9 @@ const createUser: RequestHandler = async (req, res, next) => {
     if (!parsedBody.success) {
       return res.status(400).json({
         status: "error",
-        message: "request body not valid",
-        errors: parsedBody.error.issues,
+        message: `request body not valid > ${parsedBody.error.issues
+          .map(issue => `${issue.path.join(",")}:${issue.message}`)
+          .join("|")}`,
       } satisfies ErrorResponse);
     }
     const { email, name, password } = parsedBody.data;
@@ -268,8 +270,9 @@ const editUser: RequestHandler = async (req, res, next) => {
     if (!parsedBody.success) {
       return res.status(400).json({
         status: "error",
-        message: "request body not valid",
-        errors: parsedBody.error.issues,
+        message: `request body not valid > ${parsedBody.error.issues
+          .map(issue => `${issue.path.join(",")}:${issue.message}`)
+          .join("|")}`,
       } satisfies ErrorResponse);
     }
     const { email: inputEmail, name: inputName, role: inputRole, password: inputPassword } = parsedBody.data;

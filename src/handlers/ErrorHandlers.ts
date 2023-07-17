@@ -37,7 +37,6 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal zod error",
-      errors: error.issues,
     } satisfies ErrorResponse);
   }
 
@@ -47,7 +46,6 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal memcached error",
-      errors: error,
     } satisfies ErrorResponse);
   }
 
@@ -57,7 +55,6 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal prisma error",
-      errors: error,
     } satisfies ErrorResponse);
   }
 
@@ -67,7 +64,6 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal jwt processing error",
-      errors: error,
     } satisfies ErrorResponse);
   }
 
@@ -79,14 +75,12 @@ const errorHandler: ErrorRequestHandler = (
       return res.json({
         status: "error",
         message: "internal nodejs crypto error",
-        errors: error,
       } satisfies ErrorResponse);
     }
     logError(`${req.path} > nodejs error`, error, false);
     return res.json({
       status: "error",
       message: "internal nodejs error",
-      errors: error,
     } satisfies ErrorResponse);
   }
 
@@ -95,7 +89,6 @@ const errorHandler: ErrorRequestHandler = (
   return res.json({
     status: "error",
     message: "unknown internal error",
-    errors: error,
   } satisfies ErrorResponse);
 };
 
