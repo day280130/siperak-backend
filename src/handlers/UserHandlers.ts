@@ -52,7 +52,9 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     const cameledOrderBy = camelized(orderBy);
 
     // form cache key for caching
-    const cacheKey = `user:${JSON.stringify({ orderBy: cameledOrderBy, ...restQueries })}`;
+    const cacheKey = `user:${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${orderBy}:${
+      restQueries.sort
+    }:${restQueries.page}:${restQueries.limit}`;
     // check if the same user query already cached
     try {
       const cachedData = await memcached.get<string>(cacheKey);
