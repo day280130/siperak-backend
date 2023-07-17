@@ -1,8 +1,9 @@
 import { cacheDuration } from "@src/configs/MemcachedConfigs.js";
 import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHelpers.js";
-import { memcached, registerCachedQueryKeys } from "@src/helpers/MemcachedHelpers.js";
-import { prisma } from "@src/helpers/PrismaHelpers.js";
-import { userSafeNoIDSchema, userSafeSchema } from "@src/schemas/UserSchema.js";
+import { invalidateCachedQueries, memcached, registerCachedQueryKeys } from "@src/helpers/MemcachedHelpers.js";
+import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
+import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
+import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
 import { RequestHandler } from "express";
 import * as z from "zod";
 
@@ -13,7 +14,7 @@ const userQuerySchema = z.object({
   orderBy: z.enum(["name", "email", "role", "created_at"]).default("created_at"),
   sort: z.enum(["asc", "desc"]).default("desc"),
   page: z.coerce.number().gte(0).default(0),
-  limit: z.coerce.number().gte(1).lte(20).default(2),
+  limit: z.coerce.number().gte(1).lte(50).default(2),
 });
 
 const usersDataCachedSchema = z.object({
@@ -182,7 +183,61 @@ const getUserData: RequestHandler = async (req, res, next) => {
   }
 };
 
+const userInputSchema = userSchema.omit({ id: true, role: true });
+
+const createUser: RequestHandler = async (req, res, next) => {
+  try {
+    // parse request body
+    const parsedBody = userInputSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        status: "error",
+        message: "request body not valid",
+        errors: parsedBody.error.issues,
+      } satisfies ErrorResponse);
+    }
+    const { email, name, password } = parsedBody.data;
+
+    // hash password
+    const hashedPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
+
+    // insert user to database
+    const insertResult = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+      },
+    });
+
+    // invalidate cached datas of user queries
+    invalidateCachedQueries("user");
+
+    // send created user and access token via response payload
+    const safeUserData = userSafeSchema.parse(insertResult);
+    return res.status(201).json({
+      status: "success",
+      message: "user created",
+      datas: safeUserData,
+    } satisfies SuccessResponse);
+  } catch (error) {
+    // catch unique email (duplication) violation
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+      if (error.meta?.target === "user_email_key") {
+        return res.status(400).json({
+          status: "error",
+          message: "account with presented email already exist in the database",
+        } satisfies ErrorResponse);
+      }
+    }
+
+    // pass internal error to global error handler
+    return next(error);
+  }
+};
+
 export const userHandlers = {
   getUsersData,
   getUserData,
+  createUser,
 };
