@@ -1,5 +1,6 @@
 import { cacheDuration } from "@src/configs/MemcachedConfigs.js";
 import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHelpers.js";
+import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKeys } from "@src/helpers/MemcachedHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
@@ -123,19 +124,31 @@ const getUsersData: RequestHandler = async (req, res, next) => {
 const getUserData: RequestHandler = async (req, res, next) => {
   try {
     // parse id from request param
-    const inputSchema = userSafeSchema.pick({ id: true });
-    const parsedParams = inputSchema.safeParse(req.params);
+    const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
 
     // send bad request if no valid params supplied
-    if (!parsedParams.success) {
+    if (!paramId.success) {
       return res.status(400).json({
         status: "error",
         message: "no valid id provided",
       } satisfies ErrorResponse);
     }
 
+    // check id and role (only admin can change other id's data)
+    // get access token header
+    const accessTokenHeader = z.string().parse(req.headers["authorization"]);
+    // decode access token
+    const accessToken = accessTokenHeader.split(" ")[1];
+    const { role: tokenRole, id: tokenId } = await jwtPromisified.decode(accessToken);
+    // check role
+    if (tokenId !== paramId.data.id && tokenRole !== "ADMIN")
+      return res.status(403).json({
+        status: "error",
+        message: "admin role needed to get other id's resource",
+      } satisfies ErrorResponse);
+
     // check if requested user data present in cache
-    const cacheKey = `user:${parsedParams.data.id}`;
+    const cacheKey = `user:${paramId.data.id}`;
     try {
       const cachedUserData = await memcached.get<string>(cacheKey);
       // use it and prolong its cache time if present
@@ -155,7 +168,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
     // console.log("getting from db");
     const userData = await prisma.user.findFirst({
       where: {
-        id: parsedParams.data.id,
+        id: paramId.data.id,
       },
     });
 
@@ -214,11 +227,11 @@ const createUser: RequestHandler = async (req, res, next) => {
     invalidateCachedQueries("user");
 
     // send created user and access token via response payload
-    const safeUserData = userSafeSchema.parse(insertResult);
+    const safeInsertedUserData = userSafeSchema.parse(insertResult);
     return res.status(201).json({
       status: "success",
       message: "user created",
-      datas: safeUserData,
+      datas: safeInsertedUserData,
     } satisfies SuccessResponse);
   } catch (error) {
     // catch unique email (duplication) violation
@@ -226,7 +239,125 @@ const createUser: RequestHandler = async (req, res, next) => {
       if (error.meta?.target === "user_email_key") {
         return res.status(400).json({
           status: "error",
-          message: "account with presented email already exist in the database",
+          message: "other account with presented email already exist in the database",
+        } satisfies ErrorResponse);
+      }
+    }
+
+    // pass internal error to global error handler
+    return next(error);
+  }
+};
+
+const userUpdateSchema = userSchema.omit({ id: true }).partial();
+
+const editUser: RequestHandler = async (req, res, next) => {
+  try {
+    // parse id from request param
+    const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
+    if (!paramId.success)
+      return res.status(400).json({
+        status: "error",
+        message: "no valid id provided",
+      } satisfies ErrorResponse);
+
+    // parse request body
+    const parsedBody = userUpdateSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        status: "error",
+        message: "request body not valid",
+        errors: parsedBody.error.issues,
+      } satisfies ErrorResponse);
+    }
+    const { email: inputEmail, name: inputName, role: inputRole, password: inputPassword } = parsedBody.data;
+
+    // hash password
+    const hashedInputPassword = (await scryptPromisified(inputPassword ?? "", PASSWORD_SECRET, 32)).toString("hex");
+
+    // check id and role (only admin can change other id's data)
+    // get and decode access token
+    const accessToken = z.string().parse(req.headers["authorization"]).split(" ")[1];
+    const { role: tokenRole, id: tokenId } = await jwtPromisified.decode(accessToken);
+    // check id
+    if (tokenId !== paramId.data.id && tokenRole !== "ADMIN")
+      return res.status(403).json({
+        status: "error",
+        message: "admin role needed to update other id's resource",
+      } satisfies ErrorResponse);
+
+    // check inputted role (only admin can change user's role to admin)
+    if (tokenRole !== "ADMIN" && inputRole === "ADMIN")
+      return res.status(403).json({
+        status: "error",
+        message: "admin role needed to update other id's role to admin",
+      } satisfies ErrorResponse);
+
+    // check user with given id presence in db
+    const currentUserData = await prisma.user.findFirst({
+      where: {
+        id: paramId.data.id,
+      },
+    });
+    // send not found if not present in db
+    if (!currentUserData) {
+      return res.status(404).json({
+        status: "error",
+        message: "user with given id not found",
+      } satisfies ErrorResponse);
+    }
+    const {
+      email: currentEmail,
+      name: currentName,
+      role: currentRole,
+      password: hashedCurrentPassword,
+    } = currentUserData;
+
+    // check admin count in database if inputted role is admin
+    // (there must be at least one admin in user table)
+    if (currentRole === "ADMIN" && inputRole === "USER") {
+      const adminCount = await prisma.user.count({
+        where: {
+          role: "ADMIN",
+        },
+      });
+      if (adminCount <= 1)
+        return res.status(400).json({
+          status: "error",
+          message: "there must be at least one admin",
+        } satisfies ErrorResponse);
+    }
+
+    // update user's data to database
+    const updateResult = await prisma.user.update({
+      where: {
+        id: paramId.data.id,
+      },
+      data: {
+        email: inputEmail ?? currentEmail,
+        name: inputName ?? currentName,
+        role: inputRole ?? currentRole,
+        password: inputPassword ? hashedInputPassword : hashedCurrentPassword,
+      },
+    });
+
+    // invalidate cached datas of user queries
+    invalidateCachedQueries("user");
+
+    // send created user and access token via response payload
+    const safeUpdatedUserData = userSafeSchema.parse(updateResult);
+    return res.status(200).json({
+      status: "success",
+      message: "user edited",
+      datas: safeUpdatedUserData,
+    } satisfies SuccessResponse);
+  } catch (error) {
+    // catch unique email (duplication) violation
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+      if (error.meta?.target === "user_email_key") {
+        return res.status(400).json({
+          status: "error",
+          message: "other account with presented email already exist in the database",
         } satisfies ErrorResponse);
       }
     }
@@ -240,4 +371,5 @@ export const userHandlers = {
   getUsersData,
   getUserData,
   createUser,
+  editUser,
 };
