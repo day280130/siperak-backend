@@ -21,6 +21,7 @@ const userQuerySchema = z.object({
 const usersDataCachedSchema = z.object({
   usersData: z.array(userSafeSchema),
   maxPage: z.number(),
+  usersCount: z.number(),
 });
 
 const camelized = (val: string) => {
@@ -66,7 +67,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
       return res.status(200).json({
         status: "success",
         message: "query success",
-        datas: { ...responseData, queries: { cameledOrderBy, restQueries } },
+        datas: { ...responseData, queries: parsedQueries },
       } satisfies SuccessResponse);
     } catch (e) {
       /* do nothing */
@@ -110,14 +111,14 @@ const getUsersData: RequestHandler = async (req, res, next) => {
 
     // cache it in case the same query is requested in further request
     memcached
-      .set(cacheKey, JSON.stringify({ usersData, maxPage }), cacheDuration.super)
+      .set(cacheKey, JSON.stringify({ usersData, maxPage, usersCount }), cacheDuration.super)
       .catch(error => logError(`${req.path} > getUsersData handler`, error));
     registerCachedQueryKeys("user", cacheKey);
 
     return res.status(200).json({
       status: "success",
       message: "query success",
-      datas: { usersData, maxPage, queries: { cameledOrderBy, restQueries } },
+      datas: { usersData, maxPage, usersCount, queries: parsedQueries },
     } satisfies SuccessResponse);
   } catch (error) {
     next(error);
