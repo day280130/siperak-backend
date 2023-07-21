@@ -15,7 +15,7 @@ const userQuerySchema = z.object({
   order_by: z.enum(["name", "email", "role", "created_at"]).default("created_at"),
   sort: z.enum(["asc", "desc"]).default("desc"),
   page: z.coerce.number().gte(0).default(0),
-  limit: z.coerce.number().gte(1).lte(50).default(2),
+  limit: z.coerce.number().gte(1).default(2),
 });
 
 const usersDataCachedSchema = z.object({
