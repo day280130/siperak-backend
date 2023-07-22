@@ -57,11 +57,12 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     const cacheKey = `user:${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${order_by}:${
       restQueries.sort
     }:${restQueries.page}:${restQueries.limit}`;
-    // check if the same user query already cached
+
+    // check if the same users query already cached
     try {
       const cachedData = await memcached.get<string>(cacheKey);
       // use it and prolong its duration if present
-      // console.log("getting from cache");
+      console.log("getting users from cache");
       const responseData = usersDataCachedSchema.parse(JSON.parse(cachedData.result));
       memcached.touch(cacheKey, cacheDuration.super);
       return res.status(200).json({
@@ -74,7 +75,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     }
 
     // get from db if not
-    // console.log("getting from db");
+    console.log("getting users from db");
     const usersData = await prisma.user.findMany({
       where: {
         email: {
