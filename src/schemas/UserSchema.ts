@@ -25,7 +25,7 @@ export const userSchema = z.object({
     .refine(val => validator.isStrongPassword(val), {
       message: "password should be at least 8 characters containing uppercases, lowercases, numbers, and symbols",
     }),
-  role: z.enum(["ADMIN", "USER"]),
+  role: z.enum(["ADMIN", "USER"]).default("USER"),
 });
 
 export type UserData = z.infer<typeof userSchema>;
