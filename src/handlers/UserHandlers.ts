@@ -343,10 +343,13 @@ const editUser: RequestHandler = async (req, res, next) => {
       },
     });
 
-    // invalidate cached datas of individual user and user queries
+    // invalidate cached datas and user queries
     invalidateCachedQueries("user");
+    // update cached user data with current id
     const cacheKey = `user:${paramId.data.id}`;
-    memcached.del(cacheKey).catch(/* do nothing even if cache not present */);
+    memcached
+      .set(cacheKey, JSON.stringify(userSafeNoIDSchema.parse(updateResult)), cacheDuration.short)
+      .catch(error => logError(`${req.path} > editUser handler`, error));
 
     // send created user and access token via response payload
     const safeUpdatedUserData = userSafeSchema.parse(updateResult);
