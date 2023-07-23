@@ -172,9 +172,8 @@ const getUserData: RequestHandler = async (req, res, next) => {
     // get it from db if not
     // console.log("getting from db");
     const userData = await prisma.user.findFirst({
-      where: {
-        id: paramId.data.id,
-      },
+      where: { id: paramId.data.id },
+      select: { email: true, name: true, role: true },
     });
 
     // send not found if not present in db
@@ -186,15 +185,14 @@ const getUserData: RequestHandler = async (req, res, next) => {
     }
 
     // use and cache it if present
-    const safeUserData = userSafeNoIDSchema.parse(userData);
     memcached
-      .set(cacheKey, JSON.stringify(safeUserData), cacheDuration.short)
+      .set(cacheKey, JSON.stringify(userData), cacheDuration.short)
       .catch(error => logError(`${req.path} > getUserData handler`, error));
 
     return res.status(200).json({
       status: "success",
       message: "user found",
-      datas: safeUserData,
+      datas: userData,
     } satisfies SuccessResponse);
   } catch (error) {
     next(error);
@@ -206,16 +204,16 @@ const userInputSchema = userSchema.omit({ id: true });
 const createUser: RequestHandler = async (req, res, next) => {
   try {
     // parse request body
-    const parsedBody = userInputSchema.safeParse(req.body);
-    if (!parsedBody.success) {
+    const inputBody = userInputSchema.safeParse(req.body);
+    if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
-        message: `request body not valid > ${parsedBody.error.issues
+        message: `request body not valid > ${inputBody.error.issues
           .map(issue => `${issue.path.join(",")}:${issue.message}`)
           .join("|")}`,
       } satisfies ErrorResponse);
     }
-    const { email, name, password, role } = parsedBody.data;
+    const { email, name, password, role } = inputBody.data;
 
     // hash password
     const hashedPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
@@ -269,19 +267,20 @@ const editUser: RequestHandler = async (req, res, next) => {
       } satisfies ErrorResponse);
 
     // parse request body
-    const parsedBody = userUpdateSchema.safeParse(req.body);
-    if (!parsedBody.success) {
+    const inputBody = userUpdateSchema.safeParse(req.body);
+    if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
-        message: `request body not valid > ${parsedBody.error.issues
+        message: `request body not valid > ${inputBody.error.issues
           .map(issue => `${issue.path.join(",")}:${issue.message}`)
           .join("|")}`,
       } satisfies ErrorResponse);
     }
-    const { email: inputEmail, name: inputName, role: inputRole, password: inputPassword } = parsedBody.data;
 
     // hash password
-    const hashedInputPassword = (await scryptPromisified(inputPassword ?? "", PASSWORD_SECRET, 32)).toString("hex");
+    const hashedInputPassword = (await scryptPromisified(inputBody.data.password ?? "", PASSWORD_SECRET, 32)).toString(
+      "hex"
+    );
 
     // check id and role (only admin can change other id's data)
     // get and decode access token
@@ -295,7 +294,7 @@ const editUser: RequestHandler = async (req, res, next) => {
       } satisfies ErrorResponse);
 
     // check inputted role (only admin can change user's role to admin)
-    if (tokenRole !== "ADMIN" && inputRole === "ADMIN")
+    if (tokenRole !== "ADMIN" && inputBody.data.role === "ADMIN")
       return res.status(403).json({
         status: "error",
         message: "admin role needed to update other id's role to admin",
@@ -306,6 +305,7 @@ const editUser: RequestHandler = async (req, res, next) => {
       where: {
         id: paramId.data.id,
       },
+      select: { email: true, name: true, role: true, password: true },
     });
     // send not found if not present in db
     if (!currentUserData) {
@@ -314,16 +314,10 @@ const editUser: RequestHandler = async (req, res, next) => {
         message: "user with given id not found",
       } satisfies ErrorResponse);
     }
-    const {
-      email: currentEmail,
-      name: currentName,
-      role: currentRole,
-      password: hashedCurrentPassword,
-    } = currentUserData;
 
     // check admin count in database if inputted role is admin
     // (there must be at least one admin in user table)
-    if (currentRole === "ADMIN" && inputRole === "USER") {
+    if (currentUserData.role === "ADMIN" && inputBody.data.role === "USER") {
       const adminCount = await prisma.user.count({
         where: {
           role: "ADMIN",
@@ -342,15 +336,17 @@ const editUser: RequestHandler = async (req, res, next) => {
         id: paramId.data.id,
       },
       data: {
-        email: inputEmail ?? currentEmail,
-        name: inputName ?? currentName,
-        role: inputRole ?? currentRole,
-        password: inputPassword ? hashedInputPassword : hashedCurrentPassword,
+        email: inputBody.data.email ?? currentUserData.email,
+        name: inputBody.data.name ?? currentUserData.name,
+        role: inputBody.data.role ?? currentUserData.role,
+        password: inputBody.data.password ? hashedInputPassword : currentUserData.password,
       },
     });
 
-    // invalidate cached datas of user queries
+    // invalidate cached datas of individual user and user queries
     invalidateCachedQueries("user");
+    const cacheKey = `user:${paramId.data.id}`;
+    memcached.del(cacheKey).catch(/* do nothing even if cache not present */);
 
     // send created user and access token via response payload
     const safeUpdatedUserData = userSafeSchema.parse(updateResult);
@@ -400,9 +396,8 @@ const deleteUser: RequestHandler = async (req, res, next) => {
     } catch (e) {
       // get from db if not
       inputtedUserData = await prisma.user.findFirst({
-        where: {
-          id: paramId.data.id,
-        },
+        where: { id: paramId.data.id },
+        select: { role: true },
       });
       // send not found if not present in db
       console.log("getting from db");
@@ -413,11 +408,10 @@ const deleteUser: RequestHandler = async (req, res, next) => {
         } satisfies ErrorResponse);
       }
     }
-    const { role: inputtedRole } = inputtedUserData;
 
     // check admin count in database
     // (there must be at least one admin in user table)
-    if (inputtedRole === "ADMIN") {
+    if (inputtedUserData.role === "ADMIN") {
       const adminCount = await prisma.user.count({
         where: {
           role: "ADMIN",
