@@ -242,7 +242,7 @@ const createUser: RequestHandler = async (req, res, next) => {
     // catch unique email (duplication) violation
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
       if (error.meta?.target === "user_email_key") {
-        return res.status(400).json({
+        return res.status(409).json({
           status: "error",
           message: "other account with presented email already exist in the database",
         } satisfies ErrorResponse);
@@ -362,7 +362,7 @@ const editUser: RequestHandler = async (req, res, next) => {
     // catch unique email (duplication) violation
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
       if (error.meta?.target === "user_email_key") {
-        return res.status(400).json({
+        return res.status(409).json({
           status: "error",
           message: "other account with presented email already exist in the database",
         } satisfies ErrorResponse);
