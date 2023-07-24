@@ -9,6 +9,7 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
   try {
     // check access token presence in header
     const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
+    // console.log(accessTokenHeader);
     if (!accessTokenHeader.success) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
     const authorizationStrings = accessTokenHeader.data.split(" ");
 
@@ -19,6 +20,7 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
     // get access token
     const accessToken = authorizationStrings[1];
     if (!accessToken) throw new Error(AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE);
+    // console.log(accessToken);
 
     // verify access token
     await jwtPromisified.verify("ACCESS_TOKEN", accessToken);

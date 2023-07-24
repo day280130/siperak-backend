@@ -158,7 +158,9 @@ const login: RequestHandler = async (req, res, next) => {
     const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
 
     // store refresh token as long session key in cache
-    await memcached.set(accessToken, user.id, cacheDuration.super);
+    await memcached.set(accessToken, user.id, cacheDuration.medium);
+    // debugging only :
+    // await memcached.set(accessToken, user.id, 10);
 
     // send logged in user data and access token via response payload
     return res.status(200).json({
@@ -198,6 +200,8 @@ const refresh: RequestHandler = async (req, res, next) => {
 
     // store new access token as short session key in cache
     await memcached.set(accessToken, id, cacheDuration.medium);
+    // debugging only :
+    // await memcached.set(accessToken, id, 10);
 
     // send new csrf token and access token via response payload
     return res.status(200).json({
