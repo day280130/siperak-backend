@@ -324,7 +324,7 @@ const editUser: RequestHandler = async (req, res, next) => {
         },
       });
       if (adminCount <= 1)
-        return res.status(400).json({
+        return res.status(409).json({
           status: "error",
           message: "there must be at least one admin",
         } satisfies ErrorResponse);
@@ -421,7 +421,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
         },
       });
       if (adminCount <= 1)
-        return res.status(400).json({
+        return res.status(409).json({
           status: "error",
           message: "there must be at least one admin",
         } satisfies ErrorResponse);
