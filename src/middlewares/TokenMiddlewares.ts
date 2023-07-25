@@ -1,7 +1,7 @@
 import { AuthErrorMessages } from "@src/helpers/AuthHelpers.js";
 import { ErrorResponse } from "@src/helpers/HandlerHelpers.js";
 import { JsonWebTokenError, TokenExpiredError, jwtPromisified } from "@src/helpers/JwtHelpers.js";
-import { MemcachedMethodError, memcached } from "@src/helpers/MemcachedHelpers.js";
+import { MemcachedMethodError, getCachedQueryKeys, memcached } from "@src/helpers/MemcachedHelpers.js";
 import { RequestHandler } from "express";
 import * as z from "zod";
 
@@ -74,9 +74,15 @@ export const checkRefreshToken: RequestHandler = async (req, res, next) => {
     await jwtPromisified.verify("REFRESH_TOKEN", refreshToken);
 
     // check refresh token presence in session cache store
-    const checkResult = (await memcached.get(refreshToken)).message;
+    const checkCache = await memcached.get<string>(refreshToken);
     // console.log('🚀 > checkRefreshToken > checkResult:', checkResult);
-    if (checkResult !== "cache hit") {
+    if (checkCache.message !== "cache hit") {
+      throw new Error(AuthErrorMessages.REFRESH_TOKEN_EXPIRED);
+    }
+
+    // check refresh token presence in session key list cache
+    const cachedSession = await getCachedQueryKeys(`session:${checkCache.result}`);
+    if (cachedSession.filter(value => value === refreshToken).length <= 0) {
       throw new Error(AuthErrorMessages.REFRESH_TOKEN_EXPIRED);
     }
 

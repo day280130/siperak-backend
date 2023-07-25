@@ -1,7 +1,7 @@
 import { cacheDuration } from "@src/configs/MemcachedConfigs.js";
 import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
-import { invalidateCachedQueries, memcached, registerCachedQueryKeys } from "@src/helpers/MemcachedHelpers.js";
+import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
 import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
@@ -114,7 +114,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     memcached
       .set(cacheKey, JSON.stringify({ datas: usersData, maxPage, dataCount: usersCount }), cacheDuration.super)
       .catch(error => logError(`${req.path} > getUsersData handler`, error));
-    registerCachedQueryKeys("user", cacheKey);
+    registerCachedQueryKey("user", cacheKey);
 
     return res.status(200).json({
       status: "success",
@@ -229,7 +229,7 @@ const createUser: RequestHandler = async (req, res, next) => {
     });
 
     // invalidate cached datas of user queries
-    invalidateCachedQueries("user");
+    await invalidateCachedQueries("user");
 
     // send created user and access token via response payload
     const safeInsertedUserData = userSafeSchema.parse(insertResult);
@@ -344,7 +344,8 @@ const editUser: RequestHandler = async (req, res, next) => {
     });
 
     // invalidate cached datas and user queries
-    invalidateCachedQueries("user");
+    await invalidateCachedQueries("user");
+
     // update cached user data with current id
     const cacheKey = `user:${paramId.data.id}`;
     memcached
@@ -433,7 +434,13 @@ const deleteUser: RequestHandler = async (req, res, next) => {
     });
 
     // invalidate cached datas of user queries
-    invalidateCachedQueries("user");
+    await invalidateCachedQueries("user");
+
+    // invalidate all session of the user
+    await invalidateCachedQueries(`session:${paramId.data.id}`);
+
+    // invalidate user data in cache
+    memcached.del(`user:${paramId.data.id}`).catch(error => logError(`${req.path} > deleteUser handler`, error, false));
 
     return res.status(200).json({
       status: "success",

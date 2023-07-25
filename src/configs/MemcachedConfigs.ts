@@ -9,6 +9,10 @@ export const memcachedDefault = new Memcached(process.env.CACHE_DB_URL ?? "local
   retry: 1000,
 });
 
+// memcachedDefault.settings((_, settings) => {
+//   console.log(settings);
+// });
+
 export const cacheDuration = {
   super: 604800, // 7 days
   long: 3600, // 1 hour

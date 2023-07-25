@@ -83,7 +83,22 @@ const del = async (key: string) =>
  */
 export const memcached = { set, get, touch, del };
 
-export const registerCachedQueryKeys = async (field: "user", cacheKey: string) => {
+export const getCachedQueryKeys = async (field: string) => {
+  // get current cached query key list
+  let cachedQueryKeys: string;
+  try {
+    cachedQueryKeys = (await memcached.get<string>(`${field}:queries`)).result;
+  } catch (e) {
+    cachedQueryKeys = "[]";
+    // console.log(e);
+  }
+  const cachedQueryKeysArr = JSON.parse(cachedQueryKeys);
+  console.log(`cached ${field} query keys :`, cachedQueryKeysArr);
+
+  return cachedQueryKeysArr as string[];
+};
+
+export const registerCachedQueryKey = async (field: string, cacheKey: string) => {
   // get current cached query key list
   let cachedQueryKeys: string;
   try {
@@ -95,7 +110,7 @@ export const registerCachedQueryKeys = async (field: "user", cacheKey: string) =
 
   // push the new cached query key
   cachedQueryKeysArr.push(cacheKey);
-  console.log("cached query keys :", cachedQueryKeysArr);
+  console.log(`updated ${field} query keys(new) :`, cachedQueryKeysArr);
 
   // put the list back to cache
   memcached
@@ -103,7 +118,27 @@ export const registerCachedQueryKeys = async (field: "user", cacheKey: string) =
     .catch(error => logError("register cached query keys", error));
 };
 
-export const invalidateCachedQueries = async (field: "user") => {
+export const eraseCachedQueryKey = async (field: string, cacheKey: string) => {
+  // get current cached query key list
+  let cachedQueryKeysArr: string[];
+  try {
+    const unParsedCachedQueryKeys = (await memcached.get<string>(`${field}:queries`)).result;
+    cachedQueryKeysArr = z.array(z.string()).min(1).parse(JSON.parse(unParsedCachedQueryKeys));
+  } catch (e) {
+    return;
+  }
+
+  // filter the cacheKey out
+  const newCachedQueryKeysArr = cachedQueryKeysArr.filter(value => value !== cacheKey);
+  console.log(`updated ${field} query keys(delete) :`, newCachedQueryKeysArr);
+
+  // put the list back to cache
+  memcached
+    .set(`${field}:queries`, JSON.stringify(newCachedQueryKeysArr), cacheDuration.super)
+    .catch(error => logError("register cached query keys", error));
+};
+
+export const invalidateCachedQueries = async (field: string) => {
   // get current cached query key list
   let cachedQueryKeys: string;
   try {
@@ -113,7 +148,7 @@ export const invalidateCachedQueries = async (field: "user") => {
   }
   const cachedQueryKeysArr = z.array(z.string()).min(1).safeParse(JSON.parse(cachedQueryKeys));
   if (!cachedQueryKeysArr.success) return;
-  console.log("deleted query keys :", cachedQueryKeysArr.data);
+  console.log(`deleted ${field} query keys :`, cachedQueryKeysArr.data);
 
   // loop through the array and delete each cached query
   cachedQueryKeysArr.data.forEach(cachedQueryKey => memcached.del(cachedQueryKey).catch());
