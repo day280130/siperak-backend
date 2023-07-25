@@ -115,7 +115,7 @@ export const registerCachedQueryKey = async (field: string, cacheKey: string) =>
   // put the list back to cache
   memcached
     .set(`${field}:queries`, JSON.stringify(cachedQueryKeysArr), cacheDuration.super)
-    .catch(error => logError("register cached query keys", error));
+    .catch(error => logError("register cached query keys", error.reason ?? error, false));
 };
 
 export const eraseCachedQueryKey = async (field: string, cacheKey: string) => {
@@ -135,7 +135,7 @@ export const eraseCachedQueryKey = async (field: string, cacheKey: string) => {
   // put the list back to cache
   memcached
     .set(`${field}:queries`, JSON.stringify(newCachedQueryKeysArr), cacheDuration.super)
-    .catch(error => logError("register cached query keys", error));
+    .catch(error => logError("register cached query keys", error.reason ?? error, false));
 };
 
 export const invalidateCachedQueries = async (field: string) => {
@@ -154,5 +154,5 @@ export const invalidateCachedQueries = async (field: string) => {
   cachedQueryKeysArr.data.forEach(cachedQueryKey => memcached.del(cachedQueryKey).catch());
 
   // delete cached query key list
-  memcached.del(`${field}:queries`).catch(error => logError("invalidate cached queries", error));
+  memcached.del(`${field}:queries`).catch(error => logError("invalidate cached queries", error.reason ?? error, false));
 };

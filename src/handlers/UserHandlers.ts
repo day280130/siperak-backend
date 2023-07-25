@@ -113,7 +113,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     // cache it in case the same query is requested in further request
     memcached
       .set(cacheKey, JSON.stringify({ datas: usersData, maxPage, dataCount: usersCount }), cacheDuration.super)
-      .catch(error => logError(`${req.path} > getUsersData handler`, error));
+      .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
     registerCachedQueryKey("user", cacheKey);
 
     return res.status(200).json({
@@ -187,7 +187,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
     // use and cache it if present
     memcached
       .set(cacheKey, JSON.stringify(userData), cacheDuration.short)
-      .catch(error => logError(`${req.path} > getUserData handler`, error));
+      .catch(error => logError(`${req.path} > getUserData handler`, error.reason ?? error, false));
 
     return res.status(200).json({
       status: "success",
@@ -350,7 +350,7 @@ const editUser: RequestHandler = async (req, res, next) => {
     const cacheKey = `user:${paramId.data.id}`;
     memcached
       .set(cacheKey, JSON.stringify(userSafeNoIDSchema.parse(updateResult)), cacheDuration.short)
-      .catch(error => logError(`${req.path} > editUser handler`, error));
+      .catch(error => logError(`${req.path} > editUser handler`, error.reason ?? error, false));
 
     // send created user and access token via response payload
     const safeUpdatedUserData = userSafeSchema.parse(updateResult);
@@ -440,7 +440,9 @@ const deleteUser: RequestHandler = async (req, res, next) => {
     await invalidateCachedQueries(`session:${paramId.data.id}`);
 
     // invalidate user data in cache
-    memcached.del(`user:${paramId.data.id}`).catch(error => logError(`${req.path} > deleteUser handler`, error, false));
+    memcached
+      .del(`user:${paramId.data.id}`)
+      .catch(error => logError(`${req.path} > deleteUser handler`, error.reason ?? error, false));
 
     return res.status(200).json({
       status: "success",

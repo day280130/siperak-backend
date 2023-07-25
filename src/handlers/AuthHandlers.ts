@@ -166,7 +166,7 @@ const login: RequestHandler = async (req, res, next) => {
     // prolong session key list cache
     memcached
       .touch(`session:${user.id}:queries`, cacheDuration.super)
-      .catch(error => logError(`${req.path} > login handler`, error, false));
+      .catch(error => logError(`${req.path} > login handler`, error.reason ?? error, false));
 
     // generate access token
     const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
@@ -200,7 +200,7 @@ const refresh: RequestHandler = async (req, res, next) => {
       const oldAccessToken = oldAccessTokenHeader.data.split(" ")[1];
 
       // invalidate old access token from session cache store if not expired yet
-      memcached.del(oldAccessToken).catch(error => logError(`${req.path} > refresh handler`, error));
+      memcached.del(oldAccessToken).catch(error => logError(`${req.path} > refresh handler`, error, false));
     }
 
     // get refresh token from header
@@ -232,10 +232,12 @@ const refresh: RequestHandler = async (req, res, next) => {
 const logout: RequestHandler = async (req, res, next) => {
   try {
     // get refresh token from header if any
-    const refreshTokenHeader = z.string().safeParse(req.headers["x-refresh-token"]);
+    const refreshTokenHeader = z.string().min(1).safeParse(req.headers["x-refresh-token"]);
     // invalidate refresh token
     if (refreshTokenHeader.success) {
-      memcached.del(refreshTokenHeader.data).catch(error => logError(`${req.path} > logout handler`, error));
+      memcached
+        .del(refreshTokenHeader.data)
+        .catch(error => logError(`${req.path} > logout handler`, error.reason ?? error, false));
 
       // erase refresh token from session key list
       if (refreshTokenHeader.data && refreshTokenHeader.data !== "") {
@@ -245,11 +247,11 @@ const logout: RequestHandler = async (req, res, next) => {
     }
 
     // get old access token from header if any
-    const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
+    const accessTokenHeader = z.string().min(1).safeParse(req.headers["authorization"]);
     if (accessTokenHeader.success) {
       // invalidate access token
       const accessToken = accessTokenHeader.data.split(" ")[1];
-      memcached.del(accessToken).catch(error => logError(`${req.path} > logout handler`, error));
+      memcached.del(accessToken).catch(error => logError(`${req.path} > logout handler`, error.reason ?? error, false));
     }
 
     // send success response
