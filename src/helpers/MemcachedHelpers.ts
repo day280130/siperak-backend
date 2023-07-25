@@ -24,7 +24,8 @@ const set = async (key: string, value: string | Buffer, lifetime: number) =>
   new Promise<MemcachedMethodSuccess<boolean>>((resolve, reject) => {
     memcachedDefault.set(key, value, lifetime, (err, result) => {
       if (err) {
-        reject(new MemcachedMethodError("internal error", err));
+        // console.log(err);
+        reject(new MemcachedMethodError("internal error", err.toString()));
       } else {
         resolve({
           message: `cache with key "${key}" set`,
@@ -38,7 +39,8 @@ const get = async <T>(key: string) =>
   new Promise<MemcachedMethodSuccess<T, "cache hit">>((resolve, reject) => {
     memcachedDefault.get(key, (err, data) => {
       if (err) {
-        reject(new MemcachedMethodError("internal error", err));
+        // console.log(err);
+        reject(new MemcachedMethodError("internal error", err.toString()));
       } else if (!data) {
         reject(new MemcachedMethodError("cache miss", "key not found"));
       } else {
@@ -54,7 +56,8 @@ const touch = async (key: string, lifetime: number) =>
   new Promise<Omit<MemcachedMethodSuccess, "result">>((resolve, reject) => {
     memcachedDefault.touch(key, lifetime, err => {
       if (err) {
-        reject(new MemcachedMethodError("internal error", err));
+        // console.log(err);
+        reject(new MemcachedMethodError("internal error", err.toString()));
       } else {
         resolve({
           message: `key "${key}" prolonged for ${lifetime} seconds`,
@@ -67,7 +70,8 @@ const del = async (key: string) =>
   new Promise<MemcachedMethodSuccess<boolean>>((resolve, reject) => {
     memcachedDefault.del(key, (err, result) => {
       if (err) {
-        reject(new MemcachedMethodError("internal error", err));
+        // console.log(err);
+        reject(new MemcachedMethodError("internal error", err.toString()));
       } else {
         resolve({
           message: `cache with key "${key}" deleted`,
