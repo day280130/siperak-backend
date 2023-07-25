@@ -254,7 +254,7 @@ const createUser: RequestHandler = async (req, res, next) => {
   }
 };
 
-const userUpdateSchema = userSchema.omit({ id: true }).partial();
+const userUpdateSchema = userSchema.omit({ id: true, password: true }).partial();
 
 const editUser: RequestHandler = async (req, res, next) => {
   try {
@@ -276,11 +276,6 @@ const editUser: RequestHandler = async (req, res, next) => {
           .join("|")}`,
       } satisfies ErrorResponse);
     }
-
-    // hash password
-    const hashedInputPassword = (await scryptPromisified(inputBody.data.password ?? "", PASSWORD_SECRET, 32)).toString(
-      "hex"
-    );
 
     // check id and role (only admin can change other id's data)
     // get and decode access token
@@ -339,7 +334,6 @@ const editUser: RequestHandler = async (req, res, next) => {
         email: inputBody.data.email ?? currentUserData.email,
         name: inputBody.data.name ?? currentUserData.name,
         role: inputBody.data.role ?? currentUserData.role,
-        password: inputBody.data.password ? hashedInputPassword : currentUserData.password,
       },
     });
 
@@ -370,6 +364,95 @@ const editUser: RequestHandler = async (req, res, next) => {
       }
     }
 
+    // pass internal error to global error handler
+    return next(error);
+  }
+};
+
+const userPasswordUpdateSchema = z.object({
+  oldPassword: userSchema.shape.password,
+  newPassword: userSchema.shape.password,
+});
+
+const editUserPassword: RequestHandler = async (req, res, next) => {
+  try {
+    // parse id from request param
+    const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
+    if (!paramId.success)
+      return res.status(400).json({
+        status: "error",
+        message: "no valid id provided",
+      } satisfies ErrorResponse);
+
+    // parse request body
+    const inputBody = userPasswordUpdateSchema.safeParse(req.body);
+    if (!inputBody.success) {
+      return res.status(400).json({
+        status: "error",
+        message: `request body not valid > ${inputBody.error.issues
+          .map(issue => `${issue.path.join(",")}:${issue.message}`)
+          .join("|")}`,
+      } satisfies ErrorResponse);
+    }
+
+    // check id (password can only be changed by the account's owner)
+    // get and decode access token
+    const accessToken = z.string().parse(req.headers["authorization"]).split(" ")[1];
+    const { id: tokenId } = await jwtPromisified.decode(accessToken);
+    // check id
+    if (tokenId !== paramId.data.id)
+      return res.status(403).json({
+        status: "error",
+        message: "password can only be changed by the account's owner",
+      } satisfies ErrorResponse);
+
+    // check user with given id presence in db
+    const currentUserData = await prisma.user.findFirst({
+      where: {
+        id: paramId.data.id,
+      },
+      select: { password: true },
+    });
+    // send not found if not present in db
+    if (!currentUserData) {
+      return res.status(404).json({
+        status: "error",
+        message: "user with given id not found",
+      } satisfies ErrorResponse);
+    }
+
+    // check old password
+    const hashedInputOldPassword = (
+      await scryptPromisified(inputBody.data.oldPassword ?? "", PASSWORD_SECRET, 32)
+    ).toString("hex");
+    if (currentUserData.password !== hashedInputOldPassword) {
+      return res.status(400).json({
+        status: "error",
+        message: "old password is wrong",
+      } satisfies ErrorResponse);
+    }
+
+    // hash new password
+    const hashedNewPassword = (await scryptPromisified(inputBody.data.newPassword ?? "", PASSWORD_SECRET, 32)).toString(
+      "hex"
+    );
+
+    // update user's data to database
+    await prisma.user.update({
+      where: {
+        id: paramId.data.id,
+      },
+      data: {
+        password: hashedNewPassword,
+      },
+    });
+
+    // send created user and access token via response payload
+    return res.status(200).json({
+      status: "success",
+      message: "user's password updated",
+    } satisfies SuccessResponse);
+  } catch (error) {
     // pass internal error to global error handler
     return next(error);
   }
@@ -458,5 +541,6 @@ export const userHandlers = {
   getUserData,
   createUser,
   editUser,
+  editUserPassword,
   deleteUser,
 };
