@@ -1,4 +1,4 @@
-import { ErrorResponse, SuccessResponse } from "@src/helpers/HandlerHelpers.js";
+import { ErrorResponse, SuccessResponse, serializeZodIssues } from "@src/helpers/HandlerHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
 import { productSchema } from "@src/schemas/ProductSchema.js";
 import { RequestHandler } from "express";
@@ -23,9 +23,7 @@ const createProduct: RequestHandler = async (req, res, next) => {
     if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
-        message: `request body not valid > ${inputBody.error.issues
-          .map(issue => `${issue.path.join(",")}:${issue.message}`)
-          .join("|")}`,
+        message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
       } satisfies ErrorResponse);
     }
 

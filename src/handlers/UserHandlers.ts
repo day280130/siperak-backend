@@ -1,5 +1,5 @@
 import { cacheDuration } from "@src/configs/MemcachedConfigs.js";
-import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHelpers.js";
+import { ErrorResponse, SuccessResponse, logError, serializeZodIssues } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
@@ -43,9 +43,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     if (!parsedQueries.success)
       return res.status(400).json({
         status: "error",
-        message: `invalid query shape detected > ${parsedQueries.error.issues
-          .map(issue => `${issue.path.join(",")}:${issue.message}`)
-          .join("|")}`,
+        message: serializeZodIssues(parsedQueries.error.issues, "invalid query shape"),
       } satisfies ErrorResponse);
 
     // get underscored query value
@@ -208,9 +206,7 @@ const createUser: RequestHandler = async (req, res, next) => {
     if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
-        message: `request body not valid > ${inputBody.error.issues
-          .map(issue => `${issue.path.join(",")}:${issue.message}`)
-          .join("|")}`,
+        message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
       } satisfies ErrorResponse);
     }
     const { email, name, password, role } = inputBody.data;
@@ -271,9 +267,7 @@ const editUser: RequestHandler = async (req, res, next) => {
     if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
-        message: `request body not valid > ${inputBody.error.issues
-          .map(issue => `${issue.path.join(",")}:${issue.message}`)
-          .join("|")}`,
+        message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
       } satisfies ErrorResponse);
     }
 
@@ -389,9 +383,7 @@ const editUserPassword: RequestHandler = async (req, res, next) => {
     if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
-        message: `request body not valid > ${inputBody.error.issues
-          .map(issue => `${issue.path.join(",")}:${issue.message}`)
-          .join("|")}`,
+        message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
       } satisfies ErrorResponse);
     }
 

@@ -1,3 +1,5 @@
+import { ZodIssue } from "zod";
+
 export type ErrorResponse = {
   status: "error";
   message: string;
@@ -14,4 +16,8 @@ export const logError = (location: string, error: unknown, known: boolean | "uns
   console.log(
     `❗ Error : ${time}@${location}[${known !== "unset" ? (known ? "known" : "unknown") : known}] : ${error}`
   );
+};
+
+export const serializeZodIssues = (issues: ZodIssue[], message: string) => {
+  return `${message}>${issues.map(issue => issue.message).join("|")}`;
 };
