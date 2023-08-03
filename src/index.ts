@@ -7,6 +7,7 @@ import { authRouters } from "@src/routers/AuthRouters.js";
 import errorHandler from "@src/handlers/ErrorHandlers.js";
 import { SuccessResponse } from "@src/helpers/HandlerHelpers.js";
 import { userRouters } from "@src/routers/UserRouters.js";
+import { productRouters } from "@src/routers/ProductRouters.js";
 
 // create express instance
 const app = express();
@@ -28,6 +29,7 @@ app.use(compression()); // compresses request and response
 // routers
 app.use(authRouters);
 app.use(userRouters);
+app.use(productRouters);
 app.get("/", (_req, res) => {
   return res.status(200).json({
     status: "success",

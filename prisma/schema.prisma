@@ -10,6 +10,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Product {
+  code      String   @id(length: 7) @map("product_code")
+  name      String   @map("product_name") @db.VarChar(100)
+  price     Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("product")
+}
+
 model User {
   id        String   @id @default(uuid()) @map("user_id")
   email     String   @unique @db.VarChar(100)
