@@ -50,7 +50,50 @@ const createProduct: RequestHandler = async (req, res, next) => {
   }
 };
 
+const productUpdateSchema = productSchema.omit({ code: true }).partial();
+
+const editProduct: RequestHandler = async (req, res, next) => {
+  try {
+    const paramCode = productSchema.pick({ code: true }).safeParse(req.params);
+    if (!paramCode.success) {
+      return res.status(400).json({
+        status: "error",
+        message: "no valid product code supplied",
+      } satisfies ErrorResponse);
+    }
+
+    const inputBody = productUpdateSchema.safeParse(req.body);
+    if (!inputBody.success) {
+      return res.status(400).json({
+        status: "error",
+        message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
+      } satisfies ErrorResponse);
+    }
+
+    const updateResult = await prisma.product.update({
+      where: { code: paramCode.data.code },
+      data: inputBody.data,
+    });
+
+    const safeUpdateResult = productSchema.parse(updateResult);
+    return res.status(200).json({
+      status: "success",
+      message: "product updated",
+      datas: safeUpdateResult,
+    } satisfies SuccessResponse);
+  } catch (error) {
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
+      return res.status(404).json({
+        status: "error",
+        message: "product with supplied code not found",
+      } satisfies ErrorResponse);
+    }
+    next(error);
+  }
+};
+
 export const productHandlers = {
   getProducts,
   createProduct,
+  editProduct,
 };
