@@ -1,5 +1,6 @@
-import { SuccessResponse } from "@src/helpers/HandlerHelpers.js";
-import { prisma } from "@src/helpers/PrismaHelpers.js";
+import { ErrorResponse, SuccessResponse } from "@src/helpers/HandlerHelpers.js";
+import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
+import { productSchema } from "@src/schemas/ProductSchema.js";
 import { RequestHandler } from "express";
 
 const getProducts: RequestHandler = async (_req, res, next) => {
@@ -16,6 +17,42 @@ const getProducts: RequestHandler = async (_req, res, next) => {
   }
 };
 
+const createProduct: RequestHandler = async (req, res, next) => {
+  try {
+    const inputBody = productSchema.safeParse(req.body);
+    if (!inputBody.success) {
+      return res.status(400).json({
+        status: "error",
+        message: `request body not valid > ${inputBody.error.issues
+          .map(issue => `${issue.path.join(",")}:${issue.message}`)
+          .join("|")}`,
+      } satisfies ErrorResponse);
+    }
+
+    const insertResult = await prisma.product.create({
+      data: inputBody.data,
+    });
+
+    const safeInsertResult = productSchema.parse(insertResult);
+    return res.status(201).json({
+      status: "success",
+      message: "product created",
+      datas: safeInsertResult,
+    } satisfies SuccessResponse);
+  } catch (error) {
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+      if (error.meta?.target === "PRIMARY") {
+        return res.status(409).json({
+          status: "error",
+          message: "other product with presented code already exist in the database",
+        } satisfies ErrorResponse);
+      }
+    }
+    next(error);
+  }
+};
+
 export const productHandlers = {
   getProducts,
+  createProduct,
 };

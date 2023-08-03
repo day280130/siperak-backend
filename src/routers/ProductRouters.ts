@@ -6,3 +6,4 @@ export const productRouters = Router();
 
 const BASE_ROUTE = "/products";
 productRouters.get(`${BASE_ROUTE}`, checkAccessToken, productHandlers.getProducts);
+productRouters.post(`${BASE_ROUTE}`, checkAccessToken, productHandlers.createProduct);
