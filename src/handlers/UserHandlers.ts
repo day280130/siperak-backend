@@ -25,7 +25,7 @@ const userQuerySchema = z.object({
 });
 
 const usersDataCachedQuerySchema = z.object({
-  datas: z.array(userSafeSchema),
+  users: z.array(userSafeSchema),
   maxPage: z.number(),
   dataCount: z.number(),
 });
@@ -76,7 +76,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
 
     // get from db if not
     // console.log("getting users from db");
-    const usersData = await prisma.user.findMany({
+    const users = await prisma.user.findMany({
       where: {
         email: {
           contains: restQueries.email ?? "",
@@ -110,14 +110,14 @@ const getUsersData: RequestHandler = async (req, res, next) => {
 
     // cache it in case the same query is requested in further request
     memcached
-      .set(cacheKey, JSON.stringify({ datas: usersData, maxPage, dataCount: usersCount }), cacheDuration.super)
+      .set(cacheKey, JSON.stringify({ users, maxPage, dataCount: usersCount }), cacheDuration.super)
       .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
     registerCachedQueryKey(queryKeys.user, cacheKey);
 
     return res.status(200).json({
       status: "success",
       message: "query success",
-      datas: { datas: usersData, maxPage, dataCount: usersCount, queries: parsedQueries },
+      datas: { users, maxPage, dataCount: usersCount, queries: parsedQueries },
     } satisfies SuccessResponse);
   } catch (error) {
     next(error);
