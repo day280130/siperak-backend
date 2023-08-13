@@ -18,7 +18,7 @@ const userQuerySchema = z.object({
   limit: z.coerce.number().gte(1).default(2),
 });
 
-const usersDataCachedSchema = z.object({
+const usersDataCachedQuerySchema = z.object({
   datas: z.array(userSafeSchema),
   maxPage: z.number(),
   dataCount: z.number(),
@@ -67,7 +67,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
       const cachedData = await memcached.get<string>(cacheKey);
       // use it and prolong its duration if present
       console.log("getting users from cache");
-      const responseData = usersDataCachedSchema.parse(JSON.parse(cachedData.result));
+      const responseData = usersDataCachedQuerySchema.parse(JSON.parse(cachedData.result));
       memcached.touch(cacheKey, cacheDuration.super);
       return res.status(200).json({
         status: "success",
