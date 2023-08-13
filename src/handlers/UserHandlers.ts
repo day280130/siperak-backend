@@ -1,5 +1,11 @@
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
-import { ErrorResponse, SuccessResponse, logError, serializeZodIssues } from "@src/helpers/HandlerHelpers.js";
+import {
+  ErrorResponse,
+  SuccessResponse,
+  camelized,
+  logError,
+  serializeZodIssues,
+} from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
@@ -23,16 +29,6 @@ const usersDataCachedQuerySchema = z.object({
   maxPage: z.number(),
   dataCount: z.number(),
 });
-
-const camelized = (val: string) => {
-  const valArr = val.split("_");
-  for (let i = 1; i < valArr.length; i++) {
-    const wordArr = valArr[i].split("");
-    wordArr[0] = valArr[i].charAt(0).toUpperCase();
-    valArr[i] = wordArr.join("");
-  }
-  return valArr.join("");
-};
 
 const getUsersData: RequestHandler = async (req, res, next) => {
   try {
@@ -66,7 +62,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     try {
       const cachedData = await memcached.get<string>(cacheKey);
       // use it and prolong its duration if present
-      console.log("getting users from cache");
+      // console.log("getting users from cache");
       const responseData = usersDataCachedQuerySchema.parse(JSON.parse(cachedData.result));
       memcached.touch(cacheKey, cacheDuration.super);
       return res.status(200).json({
@@ -79,7 +75,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     }
 
     // get from db if not
-    console.log("getting users from db");
+    // console.log("getting users from db");
     const usersData = await prisma.user.findMany({
       where: {
         email: {
@@ -93,9 +89,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
         },
       },
       select: { id: true, email: true, name: true, role: true },
-      orderBy: {
-        [cameledOrderBy]: restQueries.sort,
-      },
+      orderBy: { [cameledOrderBy]: restQueries.sort },
       skip: restQueries.page * restQueries.limit,
       take: restQueries.limit,
     });
@@ -118,7 +112,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     memcached
       .set(cacheKey, JSON.stringify({ datas: usersData, maxPage, dataCount: usersCount }), cacheDuration.super)
       .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
-    registerCachedQueryKey("user", cacheKey);
+    registerCachedQueryKey(queryKeys.user, cacheKey);
 
     return res.status(200).json({
       status: "success",
@@ -479,7 +473,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
     try {
       const cachedUserData = await memcached.get<string>(cacheKey);
       // use it if present
-      console.log("getting from cache");
+      // console.log("getting from cache");
       inputtedUserData = userSafeNoIDSchema.parse(JSON.parse(cachedUserData.result));
     } catch (e) {
       // get from db if not
@@ -488,7 +482,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
         select: { role: true },
       });
       // send not found if not present in db
-      console.log("getting from db");
+      // console.log("getting from db");
       if (!inputtedUserData) {
         return res.status(404).json({
           status: "error",
