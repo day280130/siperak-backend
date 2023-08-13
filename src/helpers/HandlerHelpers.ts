@@ -21,3 +21,13 @@ export const logError = (location: string, error: unknown, known: boolean | "uns
 export const serializeZodIssues = (issues: ZodIssue[], message: string) => {
   return `${message}>${issues.map(issue => issue.message).join("|")}`;
 };
+
+export const camelized = (val: string) => {
+  const valArr = val.split("_");
+  for (let i = 1; i < valArr.length; i++) {
+    const wordArr = valArr[i].split("");
+    wordArr[0] = valArr[i].charAt(0).toUpperCase();
+    valArr[i] = wordArr.join("");
+  }
+  return valArr.join("");
+};
