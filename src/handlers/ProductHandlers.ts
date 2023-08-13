@@ -28,7 +28,7 @@ const productQuerySchema = z.object({
 });
 
 const productsCachedQuerySchema = z.object({
-  products: z.array(productSchema),
+  datas: z.array(productSchema),
   maxPage: z.number(),
   dataCount: z.number(),
 });
@@ -100,14 +100,14 @@ const getProducts: RequestHandler = async (req, res, next) => {
     const maxPage = Math.ceil(productsCount / restQueries.limit) - 1;
 
     memcached
-      .set(cacheKey, JSON.stringify({ products, maxPage, dataCount: productsCount }), cacheDuration.super)
+      .set(cacheKey, JSON.stringify({ datas: products, maxPage, dataCount: productsCount }), cacheDuration.super)
       .catch(error => logError(`${req.path} > getProducts handler`, error.reason ?? error, false));
     registerCachedQueryKey(queryKeys.product, cacheKey);
 
     return res.status(200).json({
       status: "success",
       message: "query success",
-      datas: { products, maxPage, dataCount: productsCount, queries: parsedQueries },
+      datas: { datas: products, maxPage, dataCount: productsCount, queries: parsedQueries },
     } satisfies SuccessResponse);
   } catch (error) {
     next(error);

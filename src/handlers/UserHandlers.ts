@@ -25,7 +25,7 @@ const userQuerySchema = z.object({
 });
 
 const usersDataCachedQuerySchema = z.object({
-  users: z.array(userSafeSchema),
+  datas: z.array(userSafeSchema),
   maxPage: z.number(),
   dataCount: z.number(),
 });
@@ -110,14 +110,14 @@ const getUsersData: RequestHandler = async (req, res, next) => {
 
     // cache it in case the same query is requested in further request
     memcached
-      .set(cacheKey, JSON.stringify({ users, maxPage, dataCount: usersCount }), cacheDuration.super)
+      .set(cacheKey, JSON.stringify({ datas: users, maxPage, dataCount: usersCount }), cacheDuration.super)
       .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
     registerCachedQueryKey(queryKeys.user, cacheKey);
 
     return res.status(200).json({
       status: "success",
       message: "query success",
-      datas: { users, maxPage, dataCount: usersCount, queries: parsedQueries },
+      datas: { datas: users, maxPage, dataCount: usersCount, queries: parsedQueries },
     } satisfies SuccessResponse);
   } catch (error) {
     next(error);
