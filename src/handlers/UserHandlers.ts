@@ -1,4 +1,4 @@
-import { cacheDuration } from "@src/configs/MemcachedConfigs.js";
+import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
 import { ErrorResponse, SuccessResponse, logError, serializeZodIssues } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
@@ -52,9 +52,15 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     const cameledOrderBy = camelized(order_by);
 
     // form cache key for caching
-    const cacheKey = `user:${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${order_by}:${
-      restQueries.sort
-    }:${restQueries.page}:${restQueries.limit}`;
+    // const cacheKey = `user:${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${order_by}:${
+    //   restQueries.sort
+    // }:${restQueries.page}:${restQueries.limit}`;
+    const cacheKey = makeCacheKey(
+      queryKeys.user,
+      `${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${order_by}:${restQueries.sort}:${
+        restQueries.page
+      }:${restQueries.limit}`
+    );
 
     // check if the same users query already cached
     try {
@@ -151,7 +157,8 @@ const getUserData: RequestHandler = async (req, res, next) => {
       } satisfies ErrorResponse);
 
     // check if requested user data present in cache
-    const cacheKey = `user:${paramId.data.id}`;
+    // const cacheKey = `user:${paramId.data.id}`;
+    const cacheKey = makeCacheKey(queryKeys.user, paramId.data.id);
     try {
       const cachedUserData = await memcached.get<string>(cacheKey);
       // use it and prolong its cache time if present
@@ -225,7 +232,7 @@ const createUser: RequestHandler = async (req, res, next) => {
     });
 
     // invalidate cached datas of user queries
-    await invalidateCachedQueries("user");
+    await invalidateCachedQueries(queryKeys.user);
 
     // send created user and access token via response payload
     const safeInsertedUserData = userSafeSchema.parse(insertResult);
@@ -332,10 +339,11 @@ const editUser: RequestHandler = async (req, res, next) => {
     });
 
     // invalidate cached datas and user queries
-    await invalidateCachedQueries("user");
+    await invalidateCachedQueries(queryKeys.user);
 
     // update cached user data with current id
-    const cacheKey = `user:${paramId.data.id}`;
+    // const cacheKey = `user:${paramId.data.id}`;
+    const cacheKey = makeCacheKey(queryKeys.user, paramId.data.id);
     memcached
       .set(cacheKey, JSON.stringify(userSafeNoIDSchema.parse(updateResult)), cacheDuration.short)
       .catch(error => logError(`${req.path} > editUser handler`, error.reason ?? error, false));
@@ -466,7 +474,8 @@ const deleteUser: RequestHandler = async (req, res, next) => {
     // get user data
     let inputtedUserData;
     // check if requested user data present in cache
-    const cacheKey = `user:${paramId.data.id}`;
+    // const cacheKey = `user:${paramId.data.id}`;
+    const cacheKey = makeCacheKey(queryKeys.user, paramId.data.id);
     try {
       const cachedUserData = await memcached.get<string>(cacheKey);
       // use it if present
@@ -509,15 +518,14 @@ const deleteUser: RequestHandler = async (req, res, next) => {
     });
 
     // invalidate cached datas of user queries
-    await invalidateCachedQueries("user");
+    await invalidateCachedQueries(queryKeys.user);
 
     // invalidate all session of the user
-    await invalidateCachedQueries(`session:${paramId.data.id}`);
+    // await invalidateCachedQueries(`session:${paramId.data.id}`);
+    await invalidateCachedQueries(queryKeys.session(paramId.data.id));
 
     // invalidate user data in cache
-    memcached
-      .del(`user:${paramId.data.id}`)
-      .catch(error => logError(`${req.path} > deleteUser handler`, error.reason ?? error, false));
+    memcached.del(cacheKey).catch(error => logError(`${req.path} > deleteUser handler`, error.reason ?? error, false));
 
     return res.status(200).json({
       status: "success",

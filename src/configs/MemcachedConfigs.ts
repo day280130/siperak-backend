@@ -19,3 +19,11 @@ export const cacheDuration = {
   medium: 1800, // 30 minutes
   short: 300, // 5 minutes
 } as const;
+
+export const queryKeys = {
+  user: "user",
+  session: (userId: string) => `session:${userId}`,
+  product: "product",
+};
+
+export const makeCacheKey = (queryKey: string, uniqueIdentifier: string) => `${queryKey}:${uniqueIdentifier}`;

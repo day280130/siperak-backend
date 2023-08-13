@@ -1,4 +1,4 @@
-import { cacheDuration } from "@src/configs/MemcachedConfigs.js";
+import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
 import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import {
@@ -126,8 +126,9 @@ const login: RequestHandler = async (req, res, next) => {
 
     // store found user to cache (potential non-harmful error)
     // in case data want to be accessed in further request
+    const cacheKey = makeCacheKey(queryKeys.user, user.id);
     memcached
-      .set(`user:${user.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
+      .set(cacheKey, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
       .catch(error => {
         if (error instanceof MemcachedMethodError) {
           logError(`${req.path} > login handler`, error, true);
@@ -161,11 +162,13 @@ const login: RequestHandler = async (req, res, next) => {
     await memcached.set(refreshToken, user.id, cacheDuration.super);
 
     // register refresh token to session key list in cache
-    await registerCachedQueryKey(`session:${user.id}`, refreshToken);
+    // await registerCachedQueryKey(`session:${user.id}`, refreshToken);
+    await registerCachedQueryKey(queryKeys.session(user.id), refreshToken);
 
     // prolong session key list cache
     memcached
-      .touch(`session:${user.id}:queries`, cacheDuration.super)
+      // .touch(`session:${user.id}:queries`, cacheDuration.super)
+      .touch(`${queryKeys.session(user.id)}:queries`, cacheDuration.super)
       .catch(error => logError(`${req.path} > login handler`, error.reason ?? error, false));
 
     // generate access token
@@ -242,7 +245,8 @@ const logout: RequestHandler = async (req, res, next) => {
       // erase refresh token from session key list
       if (refreshTokenHeader.data && refreshTokenHeader.data !== "") {
         const { id } = await jwtPromisified.decode(refreshTokenHeader.data);
-        eraseCachedQueryKey(`session:${id}`, refreshTokenHeader.data);
+        // await eraseCachedQueryKey(`session:${id}`, refreshTokenHeader.data);
+        await eraseCachedQueryKey(queryKeys.session(id), refreshTokenHeader.data);
       }
     }
 
@@ -302,7 +306,8 @@ const forceLogout: RequestHandler = async (req, res, next) => {
     }
 
     // invalidate all session of the user
-    await invalidateCachedQueries(`session:${user.id}`);
+    // await invalidateCachedQueries(`session:${user.id}`);
+    await invalidateCachedQueries(queryKeys.session(user.id));
 
     // send success response
     return res.status(200).json({
