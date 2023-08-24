@@ -13,7 +13,7 @@ export const productSchema = z.object({
     .max(100, { message: "product name too long, max 100 characters" })
     .trim()
     .refine(val => validator.isAlphanumeric(val, "en-US", { ignore: " " }), {
-      message: "product name should only contains alpha characters and spaces",
+      message: "product name should only contains alphanumeric characters and spaces",
     })
     .transform(val => validator.escape(val)),
   price: z
