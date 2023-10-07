@@ -48,15 +48,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     const cameledOrderBy = camelized(order_by);
 
     // form cache key for caching
-    // const cacheKey = `user:${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${order_by}:${
-    //   restQueries.sort
-    // }:${restQueries.page}:${restQueries.limit}`;
-    const cacheKey = makeCacheKey(
-      queryKeys.user,
-      `${restQueries.email ?? ""}:${restQueries.name ?? ""}:${restQueries.role ?? ""}:${order_by}:${restQueries.sort}:${
-        restQueries.page
-      }:${restQueries.limit}`
-    );
+    const cacheKey = makeCacheKey(queryKeys.user, ...Object.values(parsedQueries.data).map(query => query.toString()));
 
     // check if the same users query already cached
     try {

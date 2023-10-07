@@ -45,9 +45,7 @@ const getProducts: RequestHandler = async (req, res, next) => {
     const cameledOrderBy = camelized(order_by);
     const cacheKey = makeCacheKey(
       queryKeys.product,
-      `${restQueries.code ?? ""}:${restQueries.name ?? ""}:${restQueries.price_min ?? ""}:${
-        restQueries.price_max ?? ""
-      }:${order_by}:${restQueries.sort}:${restQueries.page}:${restQueries.limit}`
+      ...Object.values(parsedQueries.data).map(query => query.toString())
     );
 
     try {

@@ -26,4 +26,5 @@ export const queryKeys = {
   product: "product",
 };
 
-export const makeCacheKey = (queryKey: string, uniqueIdentifier: string) => `${queryKey}:${uniqueIdentifier}`;
+export const makeCacheKey = (queryKey: string, ...uniqueIdentifier: string[]) =>
+  `${queryKey}:${uniqueIdentifier.join(":")}`;
