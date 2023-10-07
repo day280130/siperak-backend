@@ -22,7 +22,7 @@ export const serializeZodIssues = (issues: ZodIssue[], message: string) => {
   return `${message}>${issues.map(issue => issue.message).join("|")}`;
 };
 
-export const camelized = (val: string) => {
+export const snakeToCamel = (val: string) => {
   const valArr = val.split("_");
   for (let i = 1; i < valArr.length; i++) {
     const wordArr = valArr[i].split("");

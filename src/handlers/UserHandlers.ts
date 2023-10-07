@@ -2,7 +2,7 @@ import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedCo
 import {
   ErrorResponse,
   SuccessResponse,
-  camelized,
+  snakeToCamel,
   logError,
   serializeZodIssues,
 } from "@src/helpers/HandlerHelpers.js";
@@ -42,11 +42,6 @@ const getUsersData: RequestHandler = async (req, res, next) => {
         message: serializeZodIssues(parsedQueries.error.issues, "invalid query shape"),
       } satisfies ErrorResponse);
 
-    // get underscored query value
-    const { order_by, ...restQueries } = parsedQueries.data;
-    // and turn it into camelCase
-    const cameledOrderBy = camelized(order_by);
-
     // form cache key for caching
     const cacheKey = makeCacheKey(queryKeys.user, ...Object.values(parsedQueries.data).map(query => query.toString()));
 
@@ -71,34 +66,35 @@ const getUsersData: RequestHandler = async (req, res, next) => {
     const users = await prisma.user.findMany({
       where: {
         email: {
-          contains: restQueries.email ?? "",
+          contains: parsedQueries.data.email ?? "",
         },
         name: {
-          contains: restQueries.name ?? "",
+          contains: parsedQueries.data.name ?? "",
         },
         role: {
-          in: restQueries.role ? [restQueries.role] : ["ADMIN", "USER"],
+          in: parsedQueries.data.role ? [parsedQueries.data.role] : ["ADMIN", "USER"],
         },
       },
       select: { id: true, email: true, name: true, role: true },
-      orderBy: { [cameledOrderBy]: restQueries.sort },
-      skip: restQueries.page * restQueries.limit,
-      take: restQueries.limit,
+      // change order_by to camel case
+      orderBy: { [snakeToCamel(parsedQueries.data.order_by)]: parsedQueries.data.sort },
+      skip: parsedQueries.data.page * parsedQueries.data.limit,
+      take: parsedQueries.data.limit,
     });
     const usersCount = await prisma.user.count({
       where: {
         email: {
-          contains: restQueries.email ?? "",
+          contains: parsedQueries.data.email ?? "",
         },
         name: {
-          contains: restQueries.name ?? "",
+          contains: parsedQueries.data.name ?? "",
         },
         role: {
-          in: restQueries.role ? [restQueries.role] : ["ADMIN", "USER"],
+          in: parsedQueries.data.role ? [parsedQueries.data.role] : ["ADMIN", "USER"],
         },
       },
     });
-    const maxPage = Math.ceil(usersCount / restQueries.limit) - 1;
+    const maxPage = Math.ceil(usersCount / parsedQueries.data.limit) - 1;
 
     // cache it in case the same query is requested in further request
     memcached

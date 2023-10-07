@@ -2,7 +2,7 @@ import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedCo
 import {
   ErrorResponse,
   SuccessResponse,
-  camelized,
+  snakeToCamel,
   logError,
   serializeZodIssues,
 } from "@src/helpers/HandlerHelpers.js";
@@ -41,8 +41,7 @@ const getProducts: RequestHandler = async (req, res, next) => {
         status: "error",
         message: serializeZodIssues(parsedQueries.error.issues, "invalid query shape"),
       } satisfies ErrorResponse);
-    const { order_by, ...restQueries } = parsedQueries.data;
-    const cameledOrderBy = camelized(order_by);
+
     const cacheKey = makeCacheKey(
       queryKeys.product,
       ...Object.values(parsedQueries.data).map(query => query.toString())
@@ -66,36 +65,36 @@ const getProducts: RequestHandler = async (req, res, next) => {
     const products = await prisma.product.findMany({
       where: {
         code: {
-          contains: restQueries.code ?? "",
+          contains: parsedQueries.data.code ?? "",
         },
         name: {
-          contains: restQueries.name ?? "",
+          contains: parsedQueries.data.name ?? "",
         },
         price: {
-          gte: restQueries.price_min,
-          lte: restQueries.price_max,
+          gte: parsedQueries.data.price_min,
+          lte: parsedQueries.data.price_max,
         },
       },
       select: { code: true, name: true, price: true },
-      orderBy: { [cameledOrderBy]: restQueries.sort },
-      skip: restQueries.page * restQueries.limit,
-      take: restQueries.limit,
+      orderBy: { [snakeToCamel(parsedQueries.data.order_by)]: parsedQueries.data.sort },
+      skip: parsedQueries.data.page * parsedQueries.data.limit,
+      take: parsedQueries.data.limit,
     });
     const productsCount = await prisma.product.count({
       where: {
         code: {
-          contains: restQueries.code ?? "",
+          contains: parsedQueries.data.code ?? "",
         },
         name: {
-          contains: restQueries.name ?? "",
+          contains: parsedQueries.data.name ?? "",
         },
         price: {
-          gte: restQueries.price_min,
-          lte: restQueries.price_max,
+          gte: parsedQueries.data.price_min,
+          lte: parsedQueries.data.price_max,
         },
       },
     });
-    const maxPage = Math.ceil(productsCount / restQueries.limit) - 1;
+    const maxPage = Math.ceil(productsCount / parsedQueries.data.limit) - 1;
 
     memcached
       .set(cacheKey, JSON.stringify({ datas: products, maxPage, dataCount: productsCount }), cacheDuration.super)
