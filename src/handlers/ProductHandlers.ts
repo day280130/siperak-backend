@@ -1,15 +1,8 @@
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
-import {
-  ErrorResponse,
-  SuccessResponse,
-  snakeToCamel,
-  logError,
-  serializeZodIssues,
-} from "@src/helpers/HandlerHelpers.js";
+import { snakeToCamel, logError, serializeZodIssues, ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
 import { productSchema } from "@src/schemas/ProductSchema.js";
-import { RequestHandler } from "express";
 import { z } from "zod";
 
 const productQuerySchema = z.object({
@@ -33,14 +26,14 @@ const productsCachedQuerySchema = z.object({
   dataCount: z.number(),
 });
 
-const getProducts: RequestHandler = async (req, res, next) => {
+const getProducts: ReqHandler = async (req, res, next) => {
   try {
     const parsedQueries = productQuerySchema.safeParse(req.query);
     if (!parsedQueries.success)
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(parsedQueries.error.issues, "invalid query shape"),
-      } satisfies ErrorResponse);
+      });
 
     const cacheKey = makeCacheKey(
       queryKeys.product,
@@ -56,7 +49,7 @@ const getProducts: RequestHandler = async (req, res, next) => {
         status: "success",
         message: "query success",
         datas: { ...responseData, queries: parsedQueries.data },
-      } satisfies SuccessResponse);
+      });
     } catch (e) {
       /* do nothing */
     }
@@ -105,20 +98,20 @@ const getProducts: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "query success",
       datas: { datas: products, maxPage, dataCount: productsCount, queries: parsedQueries.data },
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     next(error);
   }
 };
 
-const getProduct: RequestHandler = async (req, res, next) => {
+const getProduct: ReqHandler = async (req, res, next) => {
   try {
     const paramCode = productSchema.pick({ code: true }).safeParse(req.params);
     if (!paramCode.success) {
       return res.status(400).json({
         status: "error",
         message: "no valid product code supplied",
-      } satisfies ErrorResponse);
+      });
     }
 
     // const cacheKey = `product:${paramCode.data.code}`;
@@ -132,7 +125,7 @@ const getProduct: RequestHandler = async (req, res, next) => {
         status: "success",
         message: "product found",
         datas: product,
-      } satisfies SuccessResponse);
+      });
     } catch (e) {
       /* do nothing */
     }
@@ -146,7 +139,7 @@ const getProduct: RequestHandler = async (req, res, next) => {
       return res.status(404).json({
         status: "error",
         message: "product with supplied code not found",
-      } satisfies ErrorResponse);
+      });
     }
 
     memcached
@@ -157,20 +150,20 @@ const getProduct: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "product found",
       datas: product,
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     next(error);
   }
 };
 
-const createProduct: RequestHandler = async (req, res, next) => {
+const createProduct: ReqHandler = async (req, res, next) => {
   try {
     const inputBody = productSchema.safeParse(req.body);
     if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
-      } satisfies ErrorResponse);
+      });
     }
 
     const insertResult = await prisma.product.create({
@@ -184,14 +177,14 @@ const createProduct: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "product created",
       datas: safeInsertResult,
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
       if (error.meta?.target === "PRIMARY") {
         return res.status(409).json({
           status: "error",
           message: "other product with presented code already exist in the database",
-        } satisfies ErrorResponse);
+        });
       }
     }
     next(error);
@@ -200,14 +193,14 @@ const createProduct: RequestHandler = async (req, res, next) => {
 
 const productUpdateSchema = productSchema.omit({ code: true }).partial();
 
-const editProduct: RequestHandler = async (req, res, next) => {
+const editProduct: ReqHandler = async (req, res, next) => {
   try {
     const paramCode = productSchema.pick({ code: true }).safeParse(req.params);
     if (!paramCode.success) {
       return res.status(400).json({
         status: "error",
         message: "no valid product code supplied",
-      } satisfies ErrorResponse);
+      });
     }
 
     const inputBody = productUpdateSchema.safeParse(req.body);
@@ -215,7 +208,7 @@ const editProduct: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
-      } satisfies ErrorResponse);
+      });
     }
 
     const updateResult = await prisma.product.update({
@@ -236,26 +229,26 @@ const editProduct: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "product updated",
       datas: safeUpdateResult,
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
       return res.status(404).json({
         status: "error",
         message: "product with supplied code not found",
-      } satisfies ErrorResponse);
+      });
     }
     next(error);
   }
 };
 
-const deleteProduct: RequestHandler = async (req, res, next) => {
+const deleteProduct: ReqHandler = async (req, res, next) => {
   try {
     const paramCode = productSchema.pick({ code: true }).safeParse(req.params);
     if (!paramCode.success) {
       return res.status(400).json({
         status: "error",
         message: "no valid product code supplied",
-      } satisfies ErrorResponse);
+      });
     }
 
     await prisma.product.delete({ where: { code: paramCode.data.code } });
@@ -270,13 +263,13 @@ const deleteProduct: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "product deleted",
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
       return res.status(404).json({
         status: "error",
         message: "product with supplied code not found",
-      } satisfies ErrorResponse);
+      });
     }
     next(error);
   }

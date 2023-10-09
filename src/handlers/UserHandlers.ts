@@ -1,17 +1,10 @@
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
-import {
-  ErrorResponse,
-  SuccessResponse,
-  snakeToCamel,
-  logError,
-  serializeZodIssues,
-} from "@src/helpers/HandlerHelpers.js";
+import { snakeToCamel, logError, serializeZodIssues, ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
 import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
-import { RequestHandler } from "express";
 import * as z from "zod";
 
 const userQuerySchema = z.object({
@@ -30,7 +23,7 @@ const usersDataCachedQuerySchema = z.object({
   dataCount: z.number(),
 });
 
-const getUsersData: RequestHandler = async (req, res, next) => {
+const getUsersData: ReqHandler = async (req, res, next) => {
   try {
     // parse queries from request query fields
     const parsedQueries = userQuerySchema.safeParse(req.query);
@@ -40,7 +33,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(parsedQueries.error.issues, "invalid query shape"),
-      } satisfies ErrorResponse);
+      });
 
     // form cache key for caching
     const cacheKey = makeCacheKey(queryKeys.user, ...Object.values(parsedQueries.data).map(query => query.toString()));
@@ -56,7 +49,7 @@ const getUsersData: RequestHandler = async (req, res, next) => {
         status: "success",
         message: "query success",
         datas: { ...responseData, queries: parsedQueries.data },
-      } satisfies SuccessResponse);
+      });
     } catch (e) {
       /* do nothing */
     }
@@ -106,13 +99,13 @@ const getUsersData: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "query success",
       datas: { datas: users, maxPage, dataCount: usersCount, queries: parsedQueries.data },
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     next(error);
   }
 };
 
-const getUserData: RequestHandler = async (req, res, next) => {
+const getUserData: ReqHandler = async (req, res, next) => {
   try {
     // parse id from request param
     const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
@@ -122,7 +115,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "no valid id provided",
-      } satisfies ErrorResponse);
+      });
     }
 
     // check id and role (only admin can change other id's data)
@@ -136,7 +129,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
       return res.status(403).json({
         status: "error",
         message: "admin role needed to get other id's resource",
-      } satisfies ErrorResponse);
+      });
 
     // check if requested user data present in cache
     // const cacheKey = `user:${paramId.data.id}`;
@@ -151,7 +144,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
         status: "success",
         message: "user found",
         datas: safeUserData,
-      } satisfies SuccessResponse);
+      });
     } catch (e) {
       /* do nothing */
     }
@@ -168,7 +161,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
       return res.status(404).json({
         status: "error",
         message: "user with given id not found",
-      } satisfies ErrorResponse);
+      });
     }
 
     // use and cache it if present
@@ -180,7 +173,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "user found",
       datas: userData,
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     next(error);
   }
@@ -188,7 +181,7 @@ const getUserData: RequestHandler = async (req, res, next) => {
 
 const userInputSchema = userSchema.omit({ id: true });
 
-const createUser: RequestHandler = async (req, res, next) => {
+const createUser: ReqHandler = async (req, res, next) => {
   try {
     // parse request body
     const inputBody = userInputSchema.safeParse(req.body);
@@ -196,7 +189,7 @@ const createUser: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
-      } satisfies ErrorResponse);
+      });
     }
     const { email, name, password, role } = inputBody.data;
 
@@ -222,7 +215,7 @@ const createUser: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "user created",
       datas: safeInsertedUserData,
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     // catch unique email (duplication) violation
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
@@ -230,7 +223,7 @@ const createUser: RequestHandler = async (req, res, next) => {
         return res.status(409).json({
           status: "error",
           message: "other account with presented email already exist in the database",
-        } satisfies ErrorResponse);
+        });
       }
     }
 
@@ -241,7 +234,7 @@ const createUser: RequestHandler = async (req, res, next) => {
 
 const userUpdateSchema = userSchema.omit({ id: true, password: true }).partial();
 
-const editUser: RequestHandler = async (req, res, next) => {
+const editUser: ReqHandler = async (req, res, next) => {
   try {
     // parse id from request param
     const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
@@ -249,7 +242,7 @@ const editUser: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "no valid id provided",
-      } satisfies ErrorResponse);
+      });
 
     // parse request body
     const inputBody = userUpdateSchema.safeParse(req.body);
@@ -257,7 +250,7 @@ const editUser: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
-      } satisfies ErrorResponse);
+      });
     }
 
     // check id and role (only admin can change other id's data)
@@ -269,14 +262,14 @@ const editUser: RequestHandler = async (req, res, next) => {
       return res.status(403).json({
         status: "error",
         message: "admin role needed to update other id's resource",
-      } satisfies ErrorResponse);
+      });
 
     // check inputted role (only admin can change user's role to admin)
     if (tokenRole !== "ADMIN" && inputBody.data.role === "ADMIN")
       return res.status(403).json({
         status: "error",
         message: "admin role needed to update other id's role to admin",
-      } satisfies ErrorResponse);
+      });
 
     // check user with given id presence in db
     const currentUserData = await prisma.user.findFirst({
@@ -290,7 +283,7 @@ const editUser: RequestHandler = async (req, res, next) => {
       return res.status(404).json({
         status: "error",
         message: "user with given id not found",
-      } satisfies ErrorResponse);
+      });
     }
 
     // check admin count in database if inputted role is admin
@@ -305,7 +298,7 @@ const editUser: RequestHandler = async (req, res, next) => {
         return res.status(409).json({
           status: "error",
           message: "there must be at least one admin",
-        } satisfies ErrorResponse);
+        });
     }
 
     // update user's data to database
@@ -336,7 +329,7 @@ const editUser: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "user updated",
       datas: safeUpdatedUserData,
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     // catch unique email (duplication) violation
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
@@ -344,7 +337,7 @@ const editUser: RequestHandler = async (req, res, next) => {
         return res.status(409).json({
           status: "error",
           message: "other account with presented email already exist in the database",
-        } satisfies ErrorResponse);
+        });
       }
     }
 
@@ -358,7 +351,7 @@ const userPasswordUpdateSchema = z.object({
   newPassword: userSchema.shape.password,
 });
 
-const editUserPassword: RequestHandler = async (req, res, next) => {
+const editUserPassword: ReqHandler = async (req, res, next) => {
   try {
     // parse id from request param
     const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
@@ -366,7 +359,7 @@ const editUserPassword: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "no valid id provided",
-      } satisfies ErrorResponse);
+      });
 
     // parse request body
     const inputBody = userPasswordUpdateSchema.safeParse(req.body);
@@ -374,7 +367,7 @@ const editUserPassword: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
-      } satisfies ErrorResponse);
+      });
     }
 
     // check id (password can only be changed by the account's owner)
@@ -386,7 +379,7 @@ const editUserPassword: RequestHandler = async (req, res, next) => {
       return res.status(403).json({
         status: "error",
         message: "password can only be changed by the account's owner",
-      } satisfies ErrorResponse);
+      });
 
     // check user with given id presence in db
     const currentUserData = await prisma.user.findFirst({
@@ -400,7 +393,7 @@ const editUserPassword: RequestHandler = async (req, res, next) => {
       return res.status(404).json({
         status: "error",
         message: "user with given id not found",
-      } satisfies ErrorResponse);
+      });
     }
 
     // check old password
@@ -411,7 +404,7 @@ const editUserPassword: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "old password is wrong",
-      } satisfies ErrorResponse);
+      });
     }
 
     // hash new password
@@ -433,14 +426,14 @@ const editUserPassword: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "user's password updated",
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     // pass internal error to global error handler
     return next(error);
   }
 };
 
-const deleteUser: RequestHandler = async (req, res, next) => {
+const deleteUser: ReqHandler = async (req, res, next) => {
   try {
     // parse id from request param
     const paramId = userSafeSchema.pick({ id: true }).safeParse(req.params);
@@ -450,7 +443,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "no valid id provided",
-      } satisfies ErrorResponse);
+      });
     }
 
     // get user data
@@ -475,7 +468,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
         return res.status(404).json({
           status: "error",
           message: "user with given id not found",
-        } satisfies ErrorResponse);
+        });
       }
     }
 
@@ -491,7 +484,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
         return res.status(409).json({
           status: "error",
           message: "there must be at least one admin",
-        } satisfies ErrorResponse);
+        });
     }
 
     // delete user
@@ -512,7 +505,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "user deleted",
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     next(error);
   }

@@ -2,7 +2,7 @@ import { ErrorResponse, logError } from "@src/helpers/HandlerHelpers.js";
 import { JsonWebTokenError } from "@src/helpers/JwtHelpers.js";
 import { MemcachedMethodError } from "@src/helpers/MemcachedHelpers.js";
 import { isPrismaError } from "@src/helpers/PrismaHelpers.js";
-import { ErrorRequestHandler, Request, Response } from "express";
+import { ErrorRequestHandler, ParamsDictionary } from "express-serve-static-core";
 import { ZodError } from "zod";
 
 type ArbitraryObject = { [key: string]: unknown };
@@ -22,10 +22,10 @@ const isErrnoException = (error: unknown): error is NodeJS.ErrnoException => {
   );
 };
 
-const errorHandler: ErrorRequestHandler = (
+const errorHandler: ErrorRequestHandler<ParamsDictionary, ErrorResponse> = (
   error: NodeJS.ErrnoException | Error,
-  req: Request,
-  res: Response,
+  req,
+  res,
   _next
 ) => {
   // set response status code to 500
@@ -37,7 +37,7 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal zod error",
-    } satisfies ErrorResponse);
+    });
   }
 
   // catch memcached error
@@ -46,7 +46,7 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal memcached error",
-    } satisfies ErrorResponse);
+    });
   }
 
   // catch unknown prisma error
@@ -55,7 +55,7 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal prisma error",
-    } satisfies ErrorResponse);
+    });
   }
 
   // catch jsonwebtoken error
@@ -64,7 +64,7 @@ const errorHandler: ErrorRequestHandler = (
     return res.json({
       status: "error",
       message: "internal jwt processing error",
-    } satisfies ErrorResponse);
+    });
   }
 
   // catch nodejs error
@@ -75,13 +75,13 @@ const errorHandler: ErrorRequestHandler = (
       return res.json({
         status: "error",
         message: "internal nodejs crypto error",
-      } satisfies ErrorResponse);
+      });
     }
     logError(`${req.path} > nodejs error`, error, false);
     return res.json({
       status: "error",
       message: "internal nodejs error",
-    } satisfies ErrorResponse);
+    });
   }
 
   // last fallback, catch unknown error
@@ -89,7 +89,7 @@ const errorHandler: ErrorRequestHandler = (
   return res.json({
     status: "error",
     message: "unknown internal error",
-  } satisfies ErrorResponse);
+  });
 };
 
 export default errorHandler;

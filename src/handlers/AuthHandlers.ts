@@ -1,5 +1,5 @@
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
-import { ErrorResponse, SuccessResponse, logError } from "@src/helpers/HandlerHelpers.js";
+import { ReqHandler, logError } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import {
   MemcachedMethodError,
@@ -12,13 +12,12 @@ import {
 import { prisma } from "@src/helpers/PrismaHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
-import { RequestHandler } from "express";
 import * as z from "zod";
 import { authConfigs } from "@src/configs/AuthConfigs.js";
 
 const userInputSchema = userSchema.omit({ id: true, role: true });
 
-// const register: RequestHandler = async (req, res, next) => {
+// const register: ReqHandler = async (req, res, next) => {
 //   try {
 //     // parse request body
 //     const parsedBody = userInputSchema.safeParse(req.body);
@@ -27,7 +26,7 @@ const userInputSchema = userSchema.omit({ id: true, role: true });
 //         status: "error",
 //         message: "request body not valid",
 //         errors: parsedBody.error.issues,
-//       } satisfies ErrorResponse);
+//       });
 //     }
 //     const { email, name, password } = parsedBody.data;
 
@@ -78,7 +77,7 @@ const userInputSchema = userSchema.omit({ id: true, role: true });
 //         refreshToken,
 //         accessToken,
 //       },
-//     } satisfies SuccessResponse);
+//     });
 //   } catch (error) {
 //     // catch register unique email violation
 //     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
@@ -86,7 +85,7 @@ const userInputSchema = userSchema.omit({ id: true, role: true });
 //         return res.status(400).json({
 //           status: "error",
 //           message: "account with presented email already exist in the database",
-//         } satisfies ErrorResponse);
+//         });
 //       }
 //     }
 
@@ -95,7 +94,7 @@ const userInputSchema = userSchema.omit({ id: true, role: true });
 //   }
 // };
 
-const login: RequestHandler = async (req, res, next) => {
+const login: ReqHandler = async (req, res, next) => {
   try {
     // parse request body
     const bodySchema = userInputSchema.omit({ name: true });
@@ -106,7 +105,7 @@ const login: RequestHandler = async (req, res, next) => {
         message: `request body not valid > ${parsedBody.error.issues
           .map(issue => `${issue.path.join(",")}:${issue.message}`)
           .join("|")}`,
-      } satisfies ErrorResponse);
+      });
     }
     const { email, password } = parsedBody.data;
 
@@ -120,7 +119,7 @@ const login: RequestHandler = async (req, res, next) => {
       return res.status(404).json({
         status: "error",
         message: "email or password is wrong",
-      } satisfies ErrorResponse);
+      });
     }
     const safeUserData = userSafeSchema.parse(user);
 
@@ -143,7 +142,7 @@ const login: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "email or password is wrong",
-      } satisfies ErrorResponse);
+      });
     }
 
     // check session count
@@ -152,7 +151,7 @@ const login: RequestHandler = async (req, res, next) => {
       return res.status(403).json({
         status: "error",
         message: "maximum allowed login count reached",
-      } satisfies ErrorResponse);
+      });
     }
 
     // generate refresh token
@@ -188,14 +187,14 @@ const login: RequestHandler = async (req, res, next) => {
         refreshToken,
         accessToken,
       },
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     // pass internal error to global error handler
     return next(error);
   }
 };
 
-const refresh: RequestHandler = async (req, res, next) => {
+const refresh: ReqHandler = async (req, res, next) => {
   try {
     // get old access token from header if any
     const oldAccessTokenHeader = z.string().safeParse(req.headers["authorization"]);
@@ -225,14 +224,14 @@ const refresh: RequestHandler = async (req, res, next) => {
       status: "success",
       message: "new access token generated",
       datas: { id, accessToken },
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     // pass internal error to global error handler
     next(error);
   }
 };
 
-const logout: RequestHandler = async (req, res, next) => {
+const logout: ReqHandler = async (req, res, next) => {
   try {
     // get refresh token from header if any
     const refreshTokenHeader = z.string().min(1).safeParse(req.headers["x-refresh-token"]);
@@ -262,13 +261,13 @@ const logout: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "logged out",
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     next(error);
   }
 };
 
-const forceLogout: RequestHandler = async (req, res, next) => {
+const forceLogout: ReqHandler = async (req, res, next) => {
   try {
     const bodySchema = userInputSchema.omit({ name: true });
     const parsedBody = bodySchema.safeParse(req.body);
@@ -278,7 +277,7 @@ const forceLogout: RequestHandler = async (req, res, next) => {
         message: `request body not valid > ${parsedBody.error.issues
           .map(issue => `${issue.path.join(",")}:${issue.message}`)
           .join("|")}`,
-      } satisfies ErrorResponse);
+      });
     }
 
     // check email presence in the database
@@ -291,7 +290,7 @@ const forceLogout: RequestHandler = async (req, res, next) => {
       return res.status(404).json({
         status: "error",
         message: "email or password is wrong",
-      } satisfies ErrorResponse);
+      });
     }
 
     // check password
@@ -302,7 +301,7 @@ const forceLogout: RequestHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "email or password is wrong",
-      } satisfies ErrorResponse);
+      });
     }
 
     // invalidate all session of the user
@@ -313,13 +312,13 @@ const forceLogout: RequestHandler = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "all sessions logged out",
-    } satisfies SuccessResponse);
+    });
   } catch (error) {
     next(error);
   }
 };
 
-const checkSession: RequestHandler = async (req, res) => {
+const checkSession: ReqHandler = async (req, res) => {
   const refreshToken = z.string().safeParse(req.headers["x-refresh-token"]);
   const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
   const { id, name, email, role } = await jwtPromisified.decode(refreshToken.success ? refreshToken.data : "");
@@ -334,7 +333,7 @@ const checkSession: RequestHandler = async (req, res) => {
       refreshToken: refreshToken.success ? refreshToken.data : "",
       accessToken: accessTokenHeader.success ? accessTokenHeader.data.split(" ")[1] : "",
     },
-  } satisfies SuccessResponse);
+  });
 };
 
 export const authHandlers = {

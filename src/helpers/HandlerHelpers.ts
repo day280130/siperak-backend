@@ -1,3 +1,4 @@
+import { ParamsDictionary, RequestHandler } from "express-serve-static-core";
 import { ZodIssue } from "zod";
 
 export type ErrorResponse = {
@@ -10,6 +11,8 @@ export type SuccessResponse = {
   message: string;
   datas?: unknown;
 };
+
+export type ReqHandler = RequestHandler<ParamsDictionary, ErrorResponse | SuccessResponse>;
 
 export const logError = (location: string, error: unknown, known: boolean | "unset" = "unset") => {
   const time = new Date().toISOString();

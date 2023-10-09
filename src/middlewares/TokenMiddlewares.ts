@@ -1,11 +1,10 @@
 import { AuthErrorMessages } from "@src/helpers/AuthHelpers.js";
-import { ErrorResponse } from "@src/helpers/HandlerHelpers.js";
+import { ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { JsonWebTokenError, TokenExpiredError, jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { MemcachedMethodError, getCachedQueryKeys, memcached } from "@src/helpers/MemcachedHelpers.js";
-import { RequestHandler } from "express";
 import * as z from "zod";
 
-export const checkAccessToken: RequestHandler = async (req, res, next) => {
+export const checkAccessToken: ReqHandler = async (req, res, next) => {
   try {
     // check access token presence in header
     const accessTokenHeader = z.string().safeParse(req.headers["authorization"]);
@@ -44,7 +43,7 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.ACCESS_TOKEN_EXPIRED,
-      } satisfies ErrorResponse);
+      });
     }
 
     // catch invalid access token error
@@ -55,7 +54,7 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE,
-      } satisfies ErrorResponse);
+      });
     }
 
     // pass internal error to global error handler
@@ -63,7 +62,7 @@ export const checkAccessToken: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const checkRefreshToken: RequestHandler = async (req, res, next) => {
+export const checkRefreshToken: ReqHandler = async (req, res, next) => {
   try {
     // check refresh token presence in header
     const refreshTokenHeader = z.string().safeParse(req.headers["x-refresh-token"]);
@@ -98,7 +97,7 @@ export const checkRefreshToken: RequestHandler = async (req, res, next) => {
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.REFRESH_TOKEN_EXPIRED,
-      } satisfies ErrorResponse);
+      });
     }
 
     // catch invalid refresh token error
@@ -109,7 +108,7 @@ export const checkRefreshToken: RequestHandler = async (req, res, next) => {
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.REFRESH_TOKEN_NOT_VALID_MESSAGE,
-      } satisfies ErrorResponse);
+      });
     }
 
     // pass internal error to global error handler
