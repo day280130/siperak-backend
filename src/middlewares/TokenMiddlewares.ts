@@ -2,7 +2,7 @@ import { AuthErrorMessages } from "@src/helpers/AuthHelpers.js";
 import { ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { JsonWebTokenError, TokenExpiredError, jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { MemcachedMethodError, getCachedQueryKeys, memcached } from "@src/helpers/MemcachedHelpers.js";
-import * as z from "zod";
+import { z } from "zod";
 
 export const checkAccessToken: ReqHandler = async (req, res, next) => {
   try {

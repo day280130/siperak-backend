@@ -1,5 +1,5 @@
 import { validatorObj as validator } from "@src/helpers/ValidatorHelpers.js";
-import * as z from "zod";
+import { z } from "zod";
 
 export const userSchema = z.object({
   id: z.string().uuid(),

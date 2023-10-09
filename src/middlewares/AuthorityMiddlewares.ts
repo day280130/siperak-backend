@@ -1,7 +1,7 @@
 import { AuthErrorMessages } from "@src/helpers/AuthHelpers.js";
 import { ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { JsonWebTokenError, jwtPromisified } from "@src/helpers/JwtHelpers.js";
-import * as z from "zod";
+import { z } from "zod";
 
 export const checkAdmin: ReqHandler = async (req, res, next) => {
   try {

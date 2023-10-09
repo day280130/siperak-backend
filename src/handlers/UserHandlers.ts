@@ -5,7 +5,7 @@ import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
 import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
-import * as z from "zod";
+import { z } from "zod";
 
 const userQuerySchema = z.object({
   name: z.string().optional(),

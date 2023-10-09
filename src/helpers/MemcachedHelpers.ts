@@ -1,6 +1,6 @@
 import { cacheDuration, memcachedDefault } from "@src/configs/MemcachedConfigs.js";
 import { logError } from "@src/helpers/HandlerHelpers.js";
-import * as z from "zod";
+import { z } from "zod";
 
 export class MemcachedMethodError extends Error {
   private _reason;

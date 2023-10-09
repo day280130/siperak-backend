@@ -12,7 +12,7 @@ import {
 import { prisma } from "@src/helpers/PrismaHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
-import * as z from "zod";
+import { z } from "zod";
 import { authConfigs } from "@src/configs/AuthConfigs.js";
 
 const userInputSchema = userSchema.omit({ id: true, role: true });
