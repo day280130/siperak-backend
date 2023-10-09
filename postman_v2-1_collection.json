@@ -7,7 +7,7 @@
 	},
 	"item": [
 		{
-			"name": "Auth",
+			"name": "Admin Auth",
 			"item": [
 				{
 					"name": "Login Admin",
@@ -242,11 +242,11 @@
 									"    pm.expect(datas).to.haveOwnProperty('accessToken');\r",
 									"});\r",
 									"\r",
-									"const oldAccessToken = pm.environment.get(\"adminAccessToken\");\r",
-									"// console.log(oldAccessToken)\r",
-									"// console.log(datas.accessToken)\r",
 									"\r",
 									"pm.test('response body datas should contains new access token', () => {\r",
+									"    const oldAccessToken = pm.environment.get(\"adminAccessToken\");\r",
+									"    // console.log(oldAccessToken)\r",
+									"    // if(datas && datas.accessToken) console.log(datas.accessToken)\r",
 									"    pm.expect(datas.accessToken).to.be.not.equals(oldAccessToken);\r",
 									"});\r",
 									"\r",
@@ -503,6 +503,526 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\r\n    \"email\": \"{{adminEmail}}\",\r\n    \"password\": \"{{adminPassword}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}:{{port}}/auth/logout/force",
+							"host": [
+								"{{url}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"logout",
+								"force"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Auth",
+			"item": [
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"pm.test('response header Content-Type should be application/json', () => {\r",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+									"});\r",
+									"\r",
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.test('response body should be an object', () => {\r",
+									"    pm.expect(responseJson).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"pm.test('response body should have correct property and value', () => {\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('datas');\r",
+									"\r",
+									"    pm.expect(responseJson.status).to.equals('success');\r",
+									"    pm.expect(responseJson.message).to.equals('logged in');\r",
+									"    pm.expect(responseJson.datas).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"const { datas } = responseJson\r",
+									"\r",
+									"pm.test('response body datas should have correct property and value', () => {\r",
+									"    pm.expect(datas).to.haveOwnProperty('id');\r",
+									"    pm.expect(datas).to.haveOwnProperty('name');\r",
+									"    pm.expect(datas).to.haveOwnProperty('email');\r",
+									"    pm.expect(datas).to.haveOwnProperty('role');\r",
+									"    pm.expect(datas).to.haveOwnProperty('refreshToken');\r",
+									"    pm.expect(datas).to.haveOwnProperty('accessToken');\r",
+									"});\r",
+									"\r",
+									"if(datas && datas.id) pm.environment.set(\"userId\", datas.id);\r",
+									"\r",
+									"if(datas && datas.name) pm.environment.set(\"userName\", datas.name);\r",
+									"\r",
+									"if(datas && datas.refreshToken) pm.environment.set(\"userRefreshToken\", datas.refreshToken);\r",
+									"\r",
+									"if(datas && datas.accessToken) pm.environment.set(\"userAccessToken\", datas.accessToken);\r",
+									"// console.log(datas.accessToken)\r",
+									"\r",
+									"pm.test('email should be email of user', () => {\r",
+									"    pm.expect(datas.email).to.be.equals(pm.environment.get(\"userEmail\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('role should be user', () => {\r",
+									"    pm.expect(datas.role).to.be.equals('USER');\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"{{userEmail}}\",\r\n    \"password\": \"{{userPassword}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}:{{port}}/auth/login",
+							"host": [
+								"{{url}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check User Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"pm.test('response header Content-Type should be application/json', () => {\r",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+									"});\r",
+									"\r",
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.test('response body should be an object', () => {\r",
+									"    pm.expect(responseJson).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"pm.test('response body should have correct property and value', () => {\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('datas');\r",
+									"\r",
+									"    pm.expect(responseJson.status).to.equals('success');\r",
+									"    pm.expect(responseJson.message).to.equals('session ok!');\r",
+									"    pm.expect(responseJson.datas).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"const { datas } = responseJson\r",
+									"\r",
+									"pm.test('response body datas should have correct property and value', () => {\r",
+									"    pm.expect(datas).to.haveOwnProperty('id');\r",
+									"    pm.expect(datas).to.haveOwnProperty('name');\r",
+									"    pm.expect(datas).to.haveOwnProperty('email');\r",
+									"    pm.expect(datas).to.haveOwnProperty('role');\r",
+									"    pm.expect(datas).to.haveOwnProperty('refreshToken');\r",
+									"    pm.expect(datas).to.haveOwnProperty('accessToken');\r",
+									"});\r",
+									"\r",
+									"pm.test('id should be correct', () => {\r",
+									"    pm.expect(datas.id).to.be.equals(pm.environment.get(\"userId\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('name should be correct', () => {\r",
+									"    pm.expect(datas.name).to.be.equals(pm.environment.get(\"userName\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('email should be correct', () => {\r",
+									"    pm.expect(datas.email).to.be.equals(pm.environment.get(\"userEmail\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('role should be user', () => {\r",
+									"    pm.expect(datas.role).to.be.equals('USER');\r",
+									"});\r",
+									"\r",
+									"pm.test('refresh token should be correct', () => {\r",
+									"    pm.expect(datas.refreshToken).to.be.equals(pm.environment.get(\"userRefreshToken\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('access token should be correct', () => {\r",
+									"    pm.expect(datas.accessToken).to.be.equals(pm.environment.get(\"userAccessToken\"));\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{userAccessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-refresh-token",
+								"value": "{{userRefreshToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url}}:{{port}}/auth/check",
+							"host": [
+								"{{url}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"check"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh User Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"pm.test('response header Content-Type should be application/json', () => {\r",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+									"});\r",
+									"\r",
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.test('response body should be an object', () => {\r",
+									"    pm.expect(responseJson).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"pm.test('response body should have correct property and value', () => {\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('datas');\r",
+									"\r",
+									"    pm.expect(responseJson.status).to.equals('success');\r",
+									"    pm.expect(responseJson.message).to.equals('new access token generated');\r",
+									"    pm.expect(responseJson.datas).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"const { datas } = pm.response.json()\r",
+									"\r",
+									"pm.test('response body datas should have correct property and value', () => {\r",
+									"    pm.expect(datas).to.haveOwnProperty('id');\r",
+									"    pm.expect(datas).to.haveOwnProperty('accessToken');\r",
+									"});\r",
+									"\r",
+									"\r",
+									"pm.test('response body datas should contains new access token', () => {\r",
+									"    const oldAccessToken = pm.environment.get(\"userAccessToken\");\r",
+									"    // console.log(oldAccessToken)\r",
+									"    // if(datas && datas.accessToken) console.log(datas.accessToken)\r",
+									"    pm.expect(datas.accessToken).to.be.not.equals(oldAccessToken);\r",
+									"});\r",
+									"\r",
+									"if(datas && datas.accessToken) pm.environment.set(\"userAccessToken\", datas.accessToken);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{userAccessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-refresh-token",
+								"value": "{{userRefreshToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url}}:{{port}}/auth/refresh",
+							"host": [
+								"{{url}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"refresh"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check User Data After Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"pm.test('response header Content-Type should be application/json', () => {\r",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+									"});\r",
+									"\r",
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.test('response body should be an object', () => {\r",
+									"    pm.expect(responseJson).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"pm.test('response body should have correct property and value', () => {\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('datas');\r",
+									"\r",
+									"    pm.expect(responseJson.status).to.equals('success');\r",
+									"    pm.expect(responseJson.message).to.equals('session ok!');\r",
+									"    pm.expect(responseJson.datas).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"const { datas } = responseJson\r",
+									"\r",
+									"pm.test('response body datas should have correct property and value', () => {\r",
+									"    pm.expect(datas).to.haveOwnProperty('id');\r",
+									"    pm.expect(datas).to.haveOwnProperty('name');\r",
+									"    pm.expect(datas).to.haveOwnProperty('email');\r",
+									"    pm.expect(datas).to.haveOwnProperty('role');\r",
+									"    pm.expect(datas).to.haveOwnProperty('refreshToken');\r",
+									"    pm.expect(datas).to.haveOwnProperty('accessToken');\r",
+									"});\r",
+									"\r",
+									"pm.test('id should be correct', () => {\r",
+									"    pm.expect(datas.id).to.be.equals(pm.environment.get(\"userId\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('name should be correct', () => {\r",
+									"    pm.expect(datas.name).to.be.equals(pm.environment.get(\"userName\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('email should be correct', () => {\r",
+									"    pm.expect(datas.email).to.be.equals(pm.environment.get(\"userEmail\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('role should be user', () => {\r",
+									"    pm.expect(datas.role).to.be.equals('USER');\r",
+									"});\r",
+									"\r",
+									"pm.test('refresh token should be correct', () => {\r",
+									"    pm.expect(datas.refreshToken).to.be.equals(pm.environment.get(\"userRefreshToken\"));\r",
+									"});\r",
+									"\r",
+									"pm.test('access token should be correct', () => {\r",
+									"    pm.expect(datas.accessToken).to.be.equals(pm.environment.get(\"userAccessToken\"));\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{userAccessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-refresh-token",
+								"value": "{{userRefreshToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url}}:{{port}}/auth/check",
+							"host": [
+								"{{url}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"check"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"pm.test('response header Content-Type should be application/json', () => {\r",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+									"});\r",
+									"\r",
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.test('response body should be an object', () => {\r",
+									"    pm.expect(responseJson).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"pm.test('response body should have correct property and value', () => {\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+									"\r",
+									"    pm.expect(responseJson.status).to.equals('success');\r",
+									"    pm.expect(responseJson.message).to.equals('logged out');\r",
+									"\r",
+									"    pm.environment.set(\"userAccessToken\", \"\");\r",
+									"    pm.environment.set(\"userRefreshToken\", \"\");\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{userAccessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-refresh-token",
+								"value": "{{userRefreshToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url}}:{{port}}/auth/logout",
+							"host": [
+								"{{url}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Force Logout User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"pm.test('response header Content-Type should be application/json', () => {\r",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+									"});\r",
+									"\r",
+									"const responseJson = pm.response.json();\r",
+									"\r",
+									"pm.test('response body should be an object', () => {\r",
+									"    pm.expect(responseJson).to.be.an('object');\r",
+									"});\r",
+									"\r",
+									"pm.test('response body should have correct property and value', () => {\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+									"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+									"\r",
+									"    pm.expect(responseJson.status).to.equals('success');\r",
+									"    pm.expect(responseJson.message).to.equals('all sessions logged out');\r",
+									"\r",
+									"    pm.environment.set(\"userAccessToken\", \"\");\r",
+									"    pm.environment.set(\"userRefreshToken\", \"\");\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"{{userEmail}}\",\r\n    \"password\": \"{{userPassword}}\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
