@@ -22,7 +22,7 @@ export const logError = (location: string, error: unknown, known: boolean | "uns
 };
 
 export const serializeZodIssues = (issues: ZodIssue[], message: string) => {
-  return `${message}>${issues.map(issue => issue.message).join("|")}`;
+  return `${message} > [ ${issues.map(issue => `${issue.path.join(",")}: ${issue.message}`).join(" ][ ")} ]`;
 };
 
 export const snakeToCamel = (val: string) => {
