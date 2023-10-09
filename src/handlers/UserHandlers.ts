@@ -39,19 +39,25 @@ const getUsersData: ReqHandler = async (req, res, next) => {
     const cacheKey = makeCacheKey(queryKeys.user, ...Object.values(parsedQueries.data).map(query => query.toString()));
 
     // check if the same users query already cached
-    try {
-      const cachedData = await memcached.get<string>(cacheKey);
+    const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
+    let cachedData;
+    if (rawCachedData) {
+      try {
+        cachedData = JSON.parse(rawCachedData.result);
+      } catch (error) {
+        logError(`${req.path} > getUsersData handler`, error, true);
+      }
       // use it and prolong its duration if present
       // console.log("getting users from cache");
-      const responseData = usersDataCachedQuerySchema.parse(JSON.parse(cachedData.result));
-      memcached.touch(cacheKey, cacheDuration.super);
-      return res.status(200).json({
-        status: "success",
-        message: "query success",
-        datas: { ...responseData, queries: parsedQueries.data },
-      });
-    } catch (e) {
-      /* do nothing */
+      const parsedCachedData = usersDataCachedQuerySchema.safeParse(cachedData);
+      if (parsedCachedData.success) {
+        memcached.touch(cacheKey, cacheDuration.super);
+        return res.status(200).json({
+          status: "success",
+          message: "query success",
+          datas: { ...parsedCachedData.data, queries: parsedQueries.data },
+        });
+      }
     }
 
     // get from db if not
@@ -132,21 +138,26 @@ const getUserData: ReqHandler = async (req, res, next) => {
       });
 
     // check if requested user data present in cache
-    // const cacheKey = `user:${paramId.data.id}`;
     const cacheKey = makeCacheKey(queryKeys.user, paramId.data.id);
-    try {
-      const cachedUserData = await memcached.get<string>(cacheKey);
+    const rawCachedUserData = await memcached.get<string>(cacheKey).catch(() => undefined);
+    if (rawCachedUserData) {
+      let cachedUserData;
+      try {
+        cachedUserData = JSON.parse(rawCachedUserData.result);
+      } catch (error) {
+        logError(`${req.path} > getUsersData handler`, error, true);
+      }
       // use it and prolong its cache time if present
       // console.log("getting from cache");
-      const safeUserData = userSafeNoIDSchema.parse(JSON.parse(cachedUserData.result));
-      memcached.touch(cacheKey, cacheDuration.short);
-      return res.status(200).json({
-        status: "success",
-        message: "user found",
-        datas: safeUserData,
-      });
-    } catch (e) {
-      /* do nothing */
+      const safeUserData = userSafeNoIDSchema.safeParse(cachedUserData);
+      if (safeUserData.success) {
+        memcached.touch(cacheKey, cacheDuration.short);
+        return res.status(200).json({
+          status: "success",
+          message: "user found",
+          datas: safeUserData.data,
+        });
+      }
     }
 
     // get it from db if not

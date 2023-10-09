@@ -40,18 +40,24 @@ const getProducts: ReqHandler = async (req, res, next) => {
       ...Object.values(parsedQueries.data).map(query => query.toString())
     );
 
-    try {
-      const cachedData = await memcached.get<string>(cacheKey);
-      console.log("getting products from cache");
-      const responseData = productsCachedQuerySchema.parse(JSON.parse(cachedData.result));
-      memcached.touch(cacheKey, cacheDuration.super);
-      return res.status(200).json({
-        status: "success",
-        message: "query success",
-        datas: { ...responseData, queries: parsedQueries.data },
-      });
-    } catch (e) {
-      /* do nothing */
+    const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
+    if (rawCachedData) {
+      let cachedData;
+      try {
+        cachedData = JSON.parse(rawCachedData.result);
+      } catch (error) {
+        logError(`${req.path} > getProducts handler`, error, true);
+      }
+      // console.log("getting products from cache");
+      const parsedCachedData = productsCachedQuerySchema.safeParse(cachedData);
+      if (parsedCachedData.success) {
+        memcached.touch(cacheKey, cacheDuration.super);
+        return res.status(200).json({
+          status: "success",
+          message: "query success",
+          datas: { ...parsedCachedData.data, queries: parsedQueries.data },
+        });
+      }
     }
 
     console.log("getting products from db");
@@ -114,20 +120,25 @@ const getProduct: ReqHandler = async (req, res, next) => {
       });
     }
 
-    // const cacheKey = `product:${paramCode.data.code}`;
     const cacheKey = makeCacheKey(queryKeys.product, paramCode.data.code);
-    try {
-      const cachedUserData = await memcached.get<string>(cacheKey);
+    const rawCachedProductData = await memcached.get<string>(cacheKey);
+    if (rawCachedProductData) {
+      let cachedProductData;
+      try {
+        cachedProductData = JSON.parse(rawCachedProductData.result);
+      } catch (error) {
+        logError(`${req.path} > getProduct handler`, error, true);
+      }
       // console.log("getting from cache");
-      const product = productSchema.parse(JSON.parse(cachedUserData.result));
-      memcached.touch(cacheKey, cacheDuration.short);
-      return res.status(200).json({
-        status: "success",
-        message: "product found",
-        datas: product,
-      });
-    } catch (e) {
-      /* do nothing */
+      const parsedCachedProductData = productSchema.safeParse(cachedProductData);
+      if (parsedCachedProductData.success) {
+        memcached.touch(cacheKey, cacheDuration.short);
+        return res.status(200).json({
+          status: "success",
+          message: "product found",
+          datas: parsedCachedProductData.data,
+        });
+      }
     }
 
     const product = await prisma.product.findFirst({
