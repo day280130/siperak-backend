@@ -1089,6 +1089,180 @@
 							"response": []
 						},
 						{
+							"name": "Put Account Password",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"pm.test('response header Content-Type should be application/json', () => {\r",
+											"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+											"});\r",
+											"\r",
+											"const responseJson = pm.response.json();\r",
+											"\r",
+											"pm.test('response body should be an object', () => {\r",
+											"    pm.expect(responseJson).to.be.an('object');\r",
+											"});\r",
+											"\r",
+											"pm.test('response body should have correct property and value', () => {\r",
+											"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+											"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+											"\r",
+											"    pm.expect(responseJson.status).to.equals('success');\r",
+											"    pm.expect(responseJson.message).to.equals('user\\'s password updated');\r",
+											"});\r",
+											"\r",
+											"pm.sendRequest(\r",
+											"    {\r",
+											"        url: `http://${pm.environment.get(\"url\")}:${pm.environment.get('port')}/auth/logout`,\r",
+											"        header: {\r",
+											"            'Content-Type': 'application/json',\r",
+											"            'x-refresh-token': pm.environment.get(\"newUser1RefreshToken\"),\r",
+											"            'authorization': pm.environment.get(\"newUser1AccessToken\"),\r",
+											"        },\r",
+											"        method: 'POST',\r",
+											"    },\r",
+											"    (error, response) => {\r",
+											"        if(error || response.code !== 200) {\r",
+											"            console.log(error, response);\r",
+											"            throw new Error(\"new user logout failed\");\r",
+											"        }\r",
+											"        pm.environment.set(\"newUser1AccessToken\", \"\");\r",
+											"        pm.environment.set(\"newUser1RefreshToken\", \"\");\r",
+											"        pm.sendRequest(\r",
+											"            {\r",
+											"                url: `http://${pm.environment.get(\"url\")}:${pm.environment.get('port')}/auth/login`,\r",
+											"                header: {\r",
+											"                    'Content-Type': 'application/json',\r",
+											"                },\r",
+											"                method: 'POST',\r",
+											"                body: {\r",
+											"                    mode: 'raw',\r",
+											"                    raw: JSON.stringify({\r",
+											"                        email: pm.environment.get(\"newUser1Email\"),\r",
+											"                        password: pm.environment.get(\"newUser1Password\"),\r",
+											"                    })\r",
+											"                },\r",
+											"            },\r",
+											"            (error, response) => {\r",
+											"                if(error) throw new Error(\"new user false login after logout failed\");\r",
+											"                pm.test('old password should not able to be used', () => {\r",
+											"                    pm.expect(response.code).to.equals(400);\r",
+											"                });\r",
+											"            },\r",
+											"        );\r",
+											"        pm.sendRequest(\r",
+											"            {\r",
+											"                url: `http://${pm.environment.get(\"url\")}:${pm.environment.get('port')}/auth/login`,\r",
+											"                header: {\r",
+											"                    'Content-Type': 'application/json',\r",
+											"                },\r",
+											"                method: 'POST',\r",
+											"                body: {\r",
+											"                    mode: 'raw',\r",
+											"                    raw: JSON.stringify({\r",
+											"                        email: pm.environment.get(\"newUser1Email\"),\r",
+											"                        password: pm.environment.get(\"newUser1NewPassword\"),\r",
+											"                    })\r",
+											"                },\r",
+											"            },\r",
+											"            (error, response) => {\r",
+											"                if(error) throw new Error(\"new user false login after logout failed\");\r",
+											"                pm.test('new password should able to be used', () => {\r",
+											"                    pm.expect(response.code).to.equals(200);\r",
+											"                });\r",
+											"                pm.sendRequest(\r",
+											"                    {\r",
+											"                        url: `http://${pm.environment.get(\"url\")}:${pm.environment.get('port')}/auth/logout/force`,\r",
+											"                        header: {\r",
+											"                            'Content-Type': 'application/json',\r",
+											"                        },\r",
+											"                        method: 'POST',\r",
+											"                        body: {\r",
+											"                            mode: 'raw',\r",
+											"                            raw: JSON.stringify({\r",
+											"                                email: pm.environment.get(\"newUser1Email\"),\r",
+											"                                password: pm.environment.get(\"newUser1NewPassword\"),\r",
+											"                            })\r",
+											"                        },\r",
+											"                    },\r",
+											"                )\r",
+											"            }\r",
+											"        );\r",
+											"    }\r",
+											");"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.sendRequest(\r",
+											"    {\r",
+											"        url: `http://${pm.environment.get(\"url\")}:${pm.environment.get('port')}/auth/login`,\r",
+											"        header: {\r",
+											"            'Content-Type': 'application/json',\r",
+											"        },\r",
+											"        method: 'POST',\r",
+											"        body: {\r",
+											"            mode: 'raw',\r",
+											"            raw: JSON.stringify({\r",
+											"                email: pm.environment.get(\"newUser1Email\"),\r",
+											"                password: pm.environment.get(\"newUser1Password\"),\r",
+											"            })\r",
+											"        },\r",
+											"    },\r",
+											"    (error, response) => {\r",
+											"        if(error || response.code !== 200) {\r",
+											"            console.log(error, response);\r",
+											"            throw new Error(\"new user login failed\");\r",
+											"        }\r",
+											"        const responseBody = response.json();\r",
+											"        pm.environment.set(\"newUser1AccessToken\", responseBody.datas.accessToken);\r",
+											"        pm.environment.set(\"newUser1RefreshToken\", responseBody.datas.refreshToken);\r",
+											"    }\r",
+											");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": {
+										"token": "{{newUser1AccessToken}}"
+									}
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "x-refresh-token",
+										"value": "{{newUser1RefreshToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"oldPassword\": \"{{newUser1Password}}\",\r\n    \"newPassword\": \"{{newUser1NewPassword}}\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{url}}:{{port}}/users/{{newUser1ID}}/password"
+							},
+							"response": []
+						},
+						{
 							"name": "Put Account",
 							"event": [
 								{
