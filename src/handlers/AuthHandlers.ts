@@ -108,6 +108,12 @@ const login: ReqHandler = async (req, res, next) => {
       });
     }
     const { email, password } = parsedBody.data;
+    if (!email) {
+      return res.status(500).json({
+        status: "error",
+        message: "failed normalizing email",
+      });
+    }
 
     // check email presence in the database
     const user = await prisma.user.findFirst({
@@ -277,6 +283,12 @@ const forceLogout: ReqHandler = async (req, res, next) => {
         message: `request body not valid > ${parsedBody.error.issues
           .map(issue => `${issue.path.join(",")}:${issue.message}`)
           .join("|")}`,
+      });
+    }
+    if (!parsedBody.data.email) {
+      return res.status(500).json({
+        status: "error",
+        message: "failed normalizing email",
       });
     }
 
