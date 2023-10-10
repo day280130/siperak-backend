@@ -9,7 +9,7 @@ export const userSchema = z.object({
     .max(100, { message: "email too long, max 100 characters" })
     .trim()
     .transform(val => validator.escape(val))
-    .transform(val => validator.normalizeEmail(val)),
+    .transform(val => validator.normalizeEmail(val, { gmail_remove_dots: false })),
   name: z
     .string({ required_error: "name required" })
     .max(100, { message: "name too long, max 100 characters" })
