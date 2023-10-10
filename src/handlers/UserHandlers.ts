@@ -203,6 +203,12 @@ const createUser: ReqHandler = async (req, res, next) => {
       });
     }
     const { email, name, password, role } = inputBody.data;
+    if (!email) {
+      return res.status(500).json({
+        status: "error",
+        message: "failed normalizing email",
+      });
+    }
 
     // hash password
     const hashedPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
@@ -261,6 +267,12 @@ const editUser: ReqHandler = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
+      });
+    }
+    if (inputBody.data.email === false) {
+      return res.status(500).json({
+        status: "error",
+        message: "failed normalizing email",
       });
     }
 
