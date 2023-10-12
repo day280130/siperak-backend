@@ -121,7 +121,7 @@ const getProduct: ReqHandler = async (req, res, next) => {
     }
 
     const cacheKey = makeCacheKey(queryKeys.product, paramCode.data.code);
-    const rawCachedProductData = await memcached.get<string>(cacheKey);
+    const rawCachedProductData = await memcached.get<string>(cacheKey).catch(() => undefined);
     if (rawCachedProductData) {
       let cachedProductData;
       try {
