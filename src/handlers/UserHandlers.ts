@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
 import { snakeToCamel, logError, serializeZodIssues, ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
@@ -62,37 +63,26 @@ const getUsersData: ReqHandler = async (req, res, next) => {
 
     // get from db if not
     // console.log("getting users from db");
-    const users = await prisma.user.findMany({
-      where: {
-        email: {
-          contains: parsedQueries.data.email ?? "",
-        },
-        name: {
-          contains: parsedQueries.data.name ?? "",
-        },
-        role: {
-          in: parsedQueries.data.role ? [parsedQueries.data.role] : ["ADMIN", "USER"],
-        },
+    const where: Prisma.UserWhereInput = {
+      email: {
+        contains: parsedQueries.data.email ?? "",
       },
+      name: {
+        contains: parsedQueries.data.name ?? "",
+      },
+      role: {
+        in: parsedQueries.data.role ? [parsedQueries.data.role] : ["ADMIN", "USER"],
+      },
+    };
+    const users = await prisma.user.findMany({
+      where,
       select: { id: true, email: true, name: true, role: true },
       // change order_by to camel case
       orderBy: { [snakeToCamel(parsedQueries.data.order_by)]: parsedQueries.data.sort },
       skip: parsedQueries.data.page * parsedQueries.data.limit,
       take: parsedQueries.data.limit,
     });
-    const usersCount = await prisma.user.count({
-      where: {
-        email: {
-          contains: parsedQueries.data.email ?? "",
-        },
-        name: {
-          contains: parsedQueries.data.name ?? "",
-        },
-        role: {
-          in: parsedQueries.data.role ? [parsedQueries.data.role] : ["ADMIN", "USER"],
-        },
-      },
-    });
+    const usersCount = await prisma.user.count({ where });
     const maxPage = Math.ceil(usersCount / parsedQueries.data.limit) - 1;
 
     // cache it in case the same query is requested in further request

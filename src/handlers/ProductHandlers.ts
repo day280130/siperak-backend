@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
 import { snakeToCamel, logError, serializeZodIssues, ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
@@ -61,38 +62,26 @@ const getProducts: ReqHandler = async (req, res, next) => {
     }
 
     console.log("getting products from db");
-    const products = await prisma.product.findMany({
-      where: {
-        code: {
-          contains: parsedQueries.data.code ?? "",
-        },
-        name: {
-          contains: parsedQueries.data.name ?? "",
-        },
-        price: {
-          gte: parsedQueries.data.price_min,
-          lte: parsedQueries.data.price_max,
-        },
+    const where: Prisma.ProductWhereInput = {
+      code: {
+        contains: parsedQueries.data.code ?? "",
       },
+      name: {
+        contains: parsedQueries.data.name ?? "",
+      },
+      price: {
+        gte: parsedQueries.data.price_min,
+        lte: parsedQueries.data.price_max,
+      },
+    };
+    const products = await prisma.product.findMany({
+      where,
       select: { code: true, name: true, price: true },
       orderBy: { [snakeToCamel(parsedQueries.data.order_by)]: parsedQueries.data.sort },
       skip: parsedQueries.data.page * parsedQueries.data.limit,
       take: parsedQueries.data.limit,
     });
-    const productsCount = await prisma.product.count({
-      where: {
-        code: {
-          contains: parsedQueries.data.code ?? "",
-        },
-        name: {
-          contains: parsedQueries.data.name ?? "",
-        },
-        price: {
-          gte: parsedQueries.data.price_min,
-          lte: parsedQueries.data.price_max,
-        },
-      },
-    });
+    const productsCount = await prisma.product.count({ where });
     const maxPage = Math.ceil(productsCount / parsedQueries.data.limit) - 1;
 
     memcached
