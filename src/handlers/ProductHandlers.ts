@@ -61,7 +61,7 @@ const getProducts: ReqHandler = async (req, res, next) => {
       }
     }
 
-    console.log("getting products from db");
+    // console.log("getting products from db");
     const where: Prisma.ProductWhereInput = {
       code: {
         contains: parsedQueries.data.code ?? "",
