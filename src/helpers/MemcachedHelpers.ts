@@ -89,13 +89,12 @@ export const memcached = { set, get, touch, del };
 
 export const getCachedQueryKeys = async (field: string) => {
   // get current cached query key list
-  let cachedQueryKeys: string;
-  try {
-    cachedQueryKeys = (await memcached.get<string>(`${field}:queries`)).result;
-  } catch (e) {
-    cachedQueryKeys = "[]";
-    // console.log(e);
-  }
+  const cachedQueryKeys = (
+    await memcached.get<string>(`${field}:queries`).catch(() => ({
+      message: "cache miss",
+      result: "[]",
+    }))
+  ).result;
   const cachedQueryKeysArr = JSON.parse(cachedQueryKeys);
   console.log(`cached ${field} query keys :`, cachedQueryKeysArr);
 
@@ -104,12 +103,12 @@ export const getCachedQueryKeys = async (field: string) => {
 
 export const registerCachedQueryKey = async (field: string, cacheKey: string) => {
   // get current cached query key list
-  let cachedQueryKeys: string;
-  try {
-    cachedQueryKeys = (await memcached.get<string>(`${field}:queries`)).result;
-  } catch (e) {
-    cachedQueryKeys = "[]";
-  }
+  const cachedQueryKeys = (
+    await memcached.get<string>(`${field}:queries`).catch(() => ({
+      message: "cache miss",
+      result: "[]",
+    }))
+  ).result;
   const cachedQueryKeysArr = JSON.parse(cachedQueryKeys);
 
   // push the new cached query key

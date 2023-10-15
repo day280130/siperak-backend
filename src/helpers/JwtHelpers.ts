@@ -23,10 +23,10 @@ const sign = async (tokenType: "REFRESH_TOKEN" | "ACCESS_TOKEN", initialPayload:
   }
   return new Promise<string>((resolve, reject) => {
     jwt.sign(initialPayload, secret, config, (error, token) => {
-      if (error) {
-        reject(error);
+      if (error || !token) {
+        reject(error ?? "error");
       } else {
-        resolve(token ?? "error");
+        resolve(token);
       }
     });
   });
