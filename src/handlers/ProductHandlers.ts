@@ -3,29 +3,7 @@ import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedCo
 import { snakeToCamel, logError, serializeZodIssues, ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
-import { productSchema } from "@src/schemas/ProductSchema.js";
-import { z } from "zod";
-
-const productQuerySchema = z.object({
-  code: z.string().optional(),
-  name: z.string().optional(),
-  price_min: z.coerce
-    .number()
-    .gte(0)
-    .lte(Number.MAX_SAFE_INTEGER - 1)
-    .default(0),
-  price_max: z.coerce.number().gte(1).lte(Number.MAX_SAFE_INTEGER).default(Number.MAX_SAFE_INTEGER),
-  order_by: z.enum(["code", "name", "price", "created_at"]).default("created_at"),
-  sort: z.enum(["asc", "desc"]).default("desc"),
-  page: z.coerce.number().gte(0).default(0),
-  limit: z.coerce.number().gte(1).default(2),
-});
-
-const productsCachedQuerySchema = z.object({
-  datas: z.array(productSchema),
-  maxPage: z.number(),
-  dataCount: z.number(),
-});
+import { productSchema, productQuerySchema, productsCachedQuerySchema } from "@src/schemas/ProductSchemas.js";
 
 const getProducts: ReqHandler = async (req, res, next) => {
   try {

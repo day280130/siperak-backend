@@ -11,7 +11,7 @@ import {
 } from "@src/helpers/MemcachedHelpers.js";
 import { prisma } from "@src/helpers/PrismaHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
-import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
+import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchemas.js";
 import { z } from "zod";
 import { authConfigs } from "@src/configs/AuthConfigs.js";
 

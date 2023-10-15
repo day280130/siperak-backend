@@ -5,24 +5,14 @@ import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
 import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
-import { userSafeNoIDSchema, userSafeSchema, userSchema } from "@src/schemas/UserSchema.js";
-import { z } from "zod";
-
-const userQuerySchema = z.object({
-  name: z.string().optional(),
-  email: z.string().optional(),
-  role: userSafeSchema.shape.role.optional(),
-  order_by: z.enum(["name", "email", "role", "created_at"]).default("created_at"),
-  sort: z.enum(["asc", "desc"]).default("desc"),
-  page: z.coerce.number().gte(0).default(0),
-  limit: z.coerce.number().gte(1).default(2),
-});
-
-const usersDataCachedQuerySchema = z.object({
-  datas: z.array(userSafeSchema),
-  maxPage: z.number(),
-  dataCount: z.number(),
-});
+import {
+  userQuerySchema,
+  userSafeNoIDSchema,
+  userSafeSchema,
+  userSchema,
+  usersDataCachedQuerySchema,
+} from "@src/schemas/UserSchemas.js";
+import { string as zodString, object as zodObject } from "zod";
 
 const getUsersData: ReqHandler = async (req, res, next) => {
   try {
@@ -116,7 +106,7 @@ const getUserData: ReqHandler = async (req, res, next) => {
 
     // check id and role (only admin can change other id's data)
     // get access token header
-    const accessTokenHeader = z.string().parse(req.headers["authorization"]);
+    const accessTokenHeader = zodString().parse(req.headers["authorization"]);
     // decode access token
     const accessToken = accessTokenHeader.split(" ")[1];
     const { role: tokenRole, id: tokenId } = await jwtPromisified.decode(accessToken);
@@ -268,7 +258,7 @@ const editUser: ReqHandler = async (req, res, next) => {
 
     // check id and role (only admin can change other id's data)
     // get and decode access token
-    const accessToken = z.string().parse(req.headers["authorization"]).split(" ")[1];
+    const accessToken = zodString().parse(req.headers["authorization"]).split(" ")[1];
     const { role: tokenRole, id: tokenId } = await jwtPromisified.decode(accessToken);
     // check id
     if (tokenId !== paramId.data.id && tokenRole !== "ADMIN")
@@ -359,7 +349,7 @@ const editUser: ReqHandler = async (req, res, next) => {
   }
 };
 
-const userPasswordUpdateSchema = z.object({
+const userPasswordUpdateSchema = zodObject({
   oldPassword: userSchema.shape.password,
   newPassword: userSchema.shape.password,
 });
@@ -385,7 +375,7 @@ const editUserPassword: ReqHandler = async (req, res, next) => {
 
     // check id (password can only be changed by the account's owner)
     // get and decode access token
-    const accessToken = z.string().parse(req.headers["authorization"]).split(" ")[1];
+    const accessToken = zodString().parse(req.headers["authorization"]).split(" ")[1];
     const { id: tokenId } = await jwtPromisified.decode(accessToken);
     // check id
     if (tokenId !== paramId.data.id)

@@ -1,4 +1,4 @@
-import { UserSafeData } from "@src/schemas/UserSchema.js";
+import { UserSafeData } from "@src/schemas/UserSchemas.js";
 import { JwtPayload, VerifyOptions, SignOptions } from "jsonwebtoken";
 
 export const accessTokenConfig: SignOptions = {

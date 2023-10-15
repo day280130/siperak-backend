@@ -1,4 +1,5 @@
 import { validatorObj as validator } from "@src/helpers/ValidatorHelpers.js";
+import { baseCachedQuerySchema, baseQuerySchema } from "@src/schemas/BaseSchemas.js";
 import { z } from "zod";
 
 export const userSchema = z.object({
@@ -28,8 +29,6 @@ export const userSchema = z.object({
   role: z.enum(["ADMIN", "USER"]).default("USER"),
 });
 
-export type UserData = z.infer<typeof userSchema>;
-
 /**
  * Schema for stripping password from user data
  */
@@ -45,7 +44,17 @@ export type UserSafeData = z.infer<typeof userSafeSchema>;
  */
 export const userSafeNoIDSchema = userSchema.omit({ id: true, password: true });
 
-/**
- * UserData without id and password
- */
-export type UserSafeNoIDData = z.infer<typeof userSafeNoIDSchema>;
+export const userQuerySchema = baseQuerySchema.extend({
+  name: z.string().optional(),
+  email: z.string().optional(),
+  role: userSafeSchema.shape.role.optional(),
+  order_by: z.enum(["name", "email", "role", "created_at"]).default("created_at"),
+});
+
+// type Test = z.infer<typeof userQuerySchema>
+
+export const usersDataCachedQuerySchema = baseCachedQuerySchema.extend({
+  datas: z.array(userSchema.omit({ password: true })),
+});
+
+// type Test = z.infer<typeof userQuerySchema>
