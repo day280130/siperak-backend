@@ -17,83 +17,6 @@ import { authConfigs } from "@src/configs/AuthConfigs.js";
 
 const userInputSchema = userSchema.omit({ id: true, role: true });
 
-// const register: ReqHandler = async (req, res, next) => {
-//   try {
-//     // parse request body
-//     const parsedBody = userInputSchema.safeParse(req.body);
-//     if (!parsedBody.success) {
-//       return res.status(400).json({
-//         status: "error",
-//         message: "request body not valid",
-//         errors: parsedBody.error.issues,
-//       });
-//     }
-//     const { email, name, password } = parsedBody.data;
-
-//     // hash password
-//     const hashedPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
-
-//     // insert user to database
-//     const insertResult = await prisma.user.create({
-//       data: {
-//         email,
-//         name,
-//         password: hashedPassword,
-//       },
-//     });
-
-//     const safeUserData = userSafeSchema.parse(insertResult);
-
-//     // store created user to cache (potential non-harmful error)
-//     // in case data want to be accessed in further request
-//     memcached
-//       .set(`user:${insertResult.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
-//       .catch(error => {
-//         if (error instanceof MemcachedMethodError) {
-//           logError(`${req.path} > register handler`, error, true);
-//         } else {
-//           logError(`${req.path} > register handler`, error, false);
-//         }
-//       });
-
-//     // generate refresh token
-//     const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", safeUserData);
-
-//     // store refresh token as long session key in cache
-//     await memcached.set(refreshToken, safeUserData.id, cacheDuration.super);
-
-//     // generate access token
-//     const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
-
-//     // store access token as short session key in cache
-//     await memcached.set(accessToken, safeUserData.id, cacheDuration.medium);
-
-//     // send created user and access token via response payload
-//     return res.status(201).json({
-//       status: "success",
-//       message: "user created",
-//       datas: {
-//         ...safeUserData,
-//         refreshToken,
-//         accessToken,
-//       },
-//     });
-//   } catch (error) {
-//     // catch register unique email violation
-//     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
-//       if (error.meta?.target === "user_email_key") {
-//         return res.status(400).json({
-//           status: "error",
-//           message: "account with presented email already exist in the database",
-//         });
-//       }
-//     }
-
-//     // pass internal error to global error handler
-//     return next(error);
-//   }
-// };
-
 const login: ReqHandler = async (req, res, next) => {
   try {
     // parse request body
@@ -356,3 +279,80 @@ export const authHandlers = {
   forceLogout,
   checkSession,
 };
+
+// const register: ReqHandler = async (req, res, next) => {
+//   try {
+//     // parse request body
+//     const parsedBody = userInputSchema.safeParse(req.body);
+//     if (!parsedBody.success) {
+//       return res.status(400).json({
+//         status: "error",
+//         message: "request body not valid",
+//         errors: parsedBody.error.issues,
+//       });
+//     }
+//     const { email, name, password } = parsedBody.data;
+
+//     // hash password
+//     const hashedPassword = (await scryptPromisified(password, PASSWORD_SECRET, 32)).toString("hex");
+
+//     // insert user to database
+//     const insertResult = await prisma.user.create({
+//       data: {
+//         email,
+//         name,
+//         password: hashedPassword,
+//       },
+//     });
+
+//     const safeUserData = userSafeSchema.parse(insertResult);
+
+//     // store created user to cache (potential non-harmful error)
+//     // in case data want to be accessed in further request
+//     memcached
+//       .set(`user:${insertResult.id}`, JSON.stringify(userSafeNoIDSchema.parse(safeUserData)), cacheDuration.short)
+//       .catch(error => {
+//         if (error instanceof MemcachedMethodError) {
+//           logError(`${req.path} > register handler`, error, true);
+//         } else {
+//           logError(`${req.path} > register handler`, error, false);
+//         }
+//       });
+
+//     // generate refresh token
+//     const refreshToken = await jwtPromisified.sign("REFRESH_TOKEN", safeUserData);
+
+//     // store refresh token as long session key in cache
+//     await memcached.set(refreshToken, safeUserData.id, cacheDuration.super);
+
+//     // generate access token
+//     const accessToken = await jwtPromisified.sign("ACCESS_TOKEN", safeUserData);
+
+//     // store access token as short session key in cache
+//     await memcached.set(accessToken, safeUserData.id, cacheDuration.medium);
+
+//     // send created user and access token via response payload
+//     return res.status(201).json({
+//       status: "success",
+//       message: "user created",
+//       datas: {
+//         ...safeUserData,
+//         refreshToken,
+//         accessToken,
+//       },
+//     });
+//   } catch (error) {
+//     // catch register unique email violation
+//     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+//       if (error.meta?.target === "user_email_key") {
+//         return res.status(400).json({
+//           status: "error",
+//           message: "account with presented email already exist in the database",
+//         });
+//       }
+//     }
+
+//     // pass internal error to global error handler
+//     return next(error);
+//   }
+// };
