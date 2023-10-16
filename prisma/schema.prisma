@@ -11,13 +11,44 @@ datasource db {
 }
 
 model Product {
-  code      String   @id(length: 7) @map("product_code")
-  name      String   @map("product_name") @db.VarChar(100)
-  price     Int
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  code         String                   @id @map("product_code")
+  name         String                   @map("product_name") @db.VarChar(100)
+  price        Int
+  transactions ProductsOnTransactions[]
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
 
   @@map("product")
+}
+
+model Transaction {
+  id                 String                   @id @default(uuid()) @map("transaction_id")
+  taxInvoiceNumber   String                   @map("tax_invoice_number") @db.VarChar(19)
+  customerName       String                   @map("customer_name") @db.VarChar(64)
+  customerAddress    String                   @map("customer_address") @db.VarChar(255)
+  customerNpwpNumber String                   @map("customer_npwp_number") @db.VarChar(20)
+  products           ProductsOnTransactions[]
+  total              Int
+  tax                Int
+  dpp                Int
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  @@map("transaction")
+}
+
+model ProductsOnTransactions {
+  relId         String      @id @default(uuid()) @map("rel_id")
+  quantity      Int
+  productCode   String      @map("product_code")
+  product       Product     @relation(fields: [productCode], references: [code])
+  transactionId String      @map("transaction_id")
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@unique([productCode, transactionId])
+  @@map("products_on_transactions")
 }
 
 model User {
@@ -28,7 +59,6 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   role      Role     @default(USER)
-  // todos     Todo[]
 
   @@map("user")
 }
@@ -37,15 +67,3 @@ enum Role {
   ADMIN
   USER
 }
-
-// model Todo {
-//   id        String   @id @default(uuid()) @map("todo_id")
-//   content   String   @db.Text
-//   creator   User     @relation(fields: [creatorId], references: [id])
-//   creatorId String   @map("user_id")
-//   createdAt DateTime @default(now()) @map("created_at")
-//   updatedAt DateTime @updatedAt @map("updated_at")
-
-//   @@index([creatorId])
-//   @@map("todo")
-// }
