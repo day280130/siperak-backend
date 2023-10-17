@@ -23,7 +23,7 @@ model Product {
 
 model Transaction {
   id                 String                   @id @default(uuid()) @map("transaction_id")
-  taxInvoiceNumber   String                   @map("tax_invoice_number") @db.VarChar(19)
+  taxInvoiceNumber   String?                  @map("tax_invoice_number") @db.VarChar(19)
   customerName       String                   @map("customer_name") @db.VarChar(64)
   customerAddress    String                   @map("customer_address") @db.VarChar(255)
   customerNpwpNumber String                   @map("customer_npwp_number") @db.VarChar(20)
@@ -38,7 +38,7 @@ model Transaction {
 }
 
 model ProductsOnTransactions {
-  relId         String      @id @default(uuid()) @map("rel_id")
+  relId         String      @id @map("rel_id")
   quantity      Int
   productCode   String      @map("product_code")
   product       Product     @relation(fields: [productCode], references: [code])
