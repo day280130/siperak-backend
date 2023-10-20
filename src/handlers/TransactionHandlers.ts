@@ -3,7 +3,7 @@ import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedCo
 import { ReqHandler, logError, serializeZodIssues, snakeToCamel } from "@src/helpers/HandlerHelpers.js";
 import { memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
 import { prisma } from "@src/helpers/PrismaHelpers.js";
-import { transactionCachedQuerySchema, transactionQuerySchema } from "@src/schemas/TransactionSchemas.js";
+import { transactionsCachedQuerySchema, transactionQuerySchema } from "@src/schemas/TransactionSchemas.js";
 
 const getTransactions: ReqHandler = async (req, res, next) => {
   try {
@@ -27,7 +27,7 @@ const getTransactions: ReqHandler = async (req, res, next) => {
       } catch (error) {
         logError(`${req.path} > getTransactions handler`, error, true);
       }
-      const parsedCachedData = transactionCachedQuerySchema.safeParse(cachedData);
+      const parsedCachedData = transactionsCachedQuerySchema.safeParse(cachedData);
       if (parsedCachedData.success) {
         console.log("getting transactions from cache");
         memcached

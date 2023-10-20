@@ -76,6 +76,6 @@ export const transactionQuerySchema = baseQuerySchema.extend({
   order_by: z.enum(["created_at", "customer", "tax", "total"]).default("created_at"),
 });
 
-export const transactionCachedQuerySchema = baseCachedQuerySchema.extend({
+export const transactionsCachedQuerySchema = baseCachedQuerySchema.extend({
   datas: z.array(transactionSchema.omit({ products: true })),
 });
