@@ -30,7 +30,9 @@ const getProducts: ReqHandler = async (req, res, next) => {
       // console.log("getting products from cache");
       const parsedCachedData = productsCachedQuerySchema.safeParse(cachedData);
       if (parsedCachedData.success) {
-        memcached.touch(cacheKey, cacheDuration.super);
+        memcached
+          .touch(cacheKey, cacheDuration.super)
+          .catch(error => logError(`${req.path} > getProducts handler`, error.reason ?? error, false));
         return res.status(200).json({
           status: "success",
           message: "query success",
@@ -99,7 +101,9 @@ const getProduct: ReqHandler = async (req, res, next) => {
       // console.log("getting from cache");
       const parsedCachedProductData = productSchema.safeParse(cachedProductData);
       if (parsedCachedProductData.success) {
-        memcached.touch(cacheKey, cacheDuration.short);
+        memcached
+          .touch(cacheKey, cacheDuration.short)
+          .catch(error => logError(`${req.path} > getProduct handler`, error.reason ?? error, false));
         return res.status(200).json({
           status: "success",
           message: "product found",

@@ -42,7 +42,9 @@ const getUsersData: ReqHandler = async (req, res, next) => {
       // console.log("getting users from cache");
       const parsedCachedData = usersDataCachedQuerySchema.safeParse(cachedData);
       if (parsedCachedData.success) {
-        memcached.touch(cacheKey, cacheDuration.super);
+        memcached
+          .touch(cacheKey, cacheDuration.super)
+          .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
         return res.status(200).json({
           status: "success",
           message: "query success",
@@ -131,7 +133,9 @@ const getUserData: ReqHandler = async (req, res, next) => {
       // console.log("getting from cache");
       const safeUserData = userSafeNoIDSchema.safeParse(cachedUserData);
       if (safeUserData.success) {
-        memcached.touch(cacheKey, cacheDuration.short);
+        memcached
+          .touch(cacheKey, cacheDuration.short)
+          .catch(error => logError(`${req.path} > getUserData handler`, error.reason ?? error, false));
         return res.status(200).json({
           status: "success",
           message: "user found",
