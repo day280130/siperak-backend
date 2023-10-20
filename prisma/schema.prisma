@@ -25,7 +25,7 @@ model Transaction {
   id                 String                   @id @default(uuid()) @map("transaction_id")
   taxInvoiceNumber   String?                  @map("tax_invoice_number") @db.VarChar(19)
   customerName       String                   @map("customer_name") @db.VarChar(64)
-  customerAddress    String                   @map("customer_address") @db.VarChar(255)
+  customerAddress    String?                  @map("customer_address") @db.VarChar(255)
   customerNpwpNumber String                   @map("customer_npwp_number") @db.VarChar(20)
   products           ProductsOnTransactions[]
   total              Int
