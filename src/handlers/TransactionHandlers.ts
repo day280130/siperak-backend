@@ -27,9 +27,9 @@ const getTransactions: ReqHandler = async (req, res, next) => {
       } catch (error) {
         logError(`${req.path} > getTransactions handler`, error, true);
       }
-      console.log("getting transactions from cache");
       const parsedCachedData = transactionCachedQuerySchema.safeParse(cachedData);
       if (parsedCachedData.success) {
+        console.log("getting transactions from cache");
         memcached
           .touch(cacheKey, cacheDuration.super)
           .catch(error => logError(`${req.path} > getTransactions handler`, error.reason ?? error, false));
@@ -38,6 +38,12 @@ const getTransactions: ReqHandler = async (req, res, next) => {
           message: "query success",
           datas: { ...parsedCachedData.data, queries: parsedQueries.data },
         });
+      } else {
+        logError(
+          `${req.path} > getTransactions handler`,
+          serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
+          false
+        );
       }
     }
 
@@ -96,6 +102,7 @@ const getTransactions: ReqHandler = async (req, res, next) => {
         cacheKey,
         JSON.stringify({
           datas: transactions,
+          maxPage,
           dataCount: transactionsCount,
         }),
         cacheDuration.super
