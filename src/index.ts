@@ -5,7 +5,7 @@ import cors from "cors";
 import helmet from "helmet";
 import { authRouters } from "@src/routers/AuthRouters.js";
 import errorHandler from "@src/handlers/ErrorHandlers.js";
-import { SuccessResponse } from "@src/helpers/HandlerHelpers.js";
+import { ErrorResponse, SuccessResponse } from "@src/helpers/HandlerHelpers.js";
 import { userRouters } from "@src/routers/UserRouters.js";
 import { productRouters } from "@src/routers/ProductRouters.js";
 import { transactionRouters } from "@src/routers/TransactionRouters.js";
@@ -32,12 +32,18 @@ app.use(authRouters);
 app.use(userRouters);
 app.use(productRouters);
 app.use(transactionRouters);
-app.get("/", (_req, res) => {
-  return res.status(200).json({
+app.get("/", (_req, res) =>
+  res.status(200).json({
     status: "success",
     message: "api ok!",
-  } satisfies SuccessResponse);
-});
+  } satisfies SuccessResponse)
+);
+app.use("*", (req, res) =>
+  res.status(404).json({
+    status: "error",
+    message: `endpoint ${req.originalUrl} doesn't exists!`,
+  } satisfies ErrorResponse)
+);
 
 // global internal error handler
 app.use(errorHandler);
