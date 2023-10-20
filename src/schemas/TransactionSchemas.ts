@@ -56,6 +56,8 @@ export const transactionSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export type TransactionProducts = z.infer<typeof transactionSchema.shape.products>;
+
 export const transactionQuerySchema = baseQuerySchema.extend({
   customer_name: z.string().optional(),
   customer_npwp: z.string().optional(),

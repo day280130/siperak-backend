@@ -40,10 +40,10 @@ model Transaction {
 model ProductsOnTransactions {
   relId         String      @id @map("rel_id")
   quantity      Int
-  productCode   String      @map("product_code")
-  product       Product     @relation(fields: [productCode], references: [code])
+  productCode   String?     @map("product_code")
+  product       Product?    @relation(fields: [productCode], references: [code], onDelete: SetNull)
   transactionId String      @map("transaction_id")
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
