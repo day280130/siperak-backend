@@ -24,7 +24,8 @@ export const queryKeys = {
   user: "user",
   session: (userId: string) => `session:${userId}`,
   product: "product",
+  transaction: "transaction",
 };
 
-export const makeCacheKey = (queryKey: string, ...uniqueIdentifier: string[]) =>
-  `${queryKey}:${uniqueIdentifier.join(":")}`;
+export const makeCacheKey = (queryKey: string, ...uniqueIdentifiers: string[]) =>
+  `${queryKey}:${uniqueIdentifiers.join(":")}`;
