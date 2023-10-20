@@ -39,9 +39,9 @@ const getUsersData: ReqHandler = async (req, res, next) => {
         logError(`${req.path} > getUsersData handler`, error, true);
       }
       // use it and prolong its duration if present
-      // console.log("getting users from cache");
       const parsedCachedData = usersDataCachedQuerySchema.safeParse(cachedData);
       if (parsedCachedData.success) {
+        // console.log("getting users from cache");
         memcached
           .touch(cacheKey, cacheDuration.super)
           .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
@@ -50,6 +50,12 @@ const getUsersData: ReqHandler = async (req, res, next) => {
           message: "query success",
           datas: { ...parsedCachedData.data, queries: parsedQueries.data },
         });
+      } else {
+        logError(
+          `${req.path} > getUsersData handler`,
+          serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
+          false
+        );
       }
     }
 
@@ -130,9 +136,9 @@ const getUserData: ReqHandler = async (req, res, next) => {
         logError(`${req.path} > getUsersData handler`, error, true);
       }
       // use it and prolong its cache time if present
-      // console.log("getting from cache");
       const safeUserData = userSafeNoIDSchema.safeParse(cachedUserData);
       if (safeUserData.success) {
+        // console.log("getting from cache");
         memcached
           .touch(cacheKey, cacheDuration.short)
           .catch(error => logError(`${req.path} > getUserData handler`, error.reason ?? error, false));
@@ -141,6 +147,12 @@ const getUserData: ReqHandler = async (req, res, next) => {
           message: "user found",
           datas: safeUserData.data,
         });
+      } else {
+        logError(
+          `${req.path} > getUserData handler`,
+          serializeZodIssues(safeUserData.error.issues, "failed parsing cache"),
+          false
+        );
       }
     }
 

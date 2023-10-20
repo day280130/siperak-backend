@@ -27,9 +27,9 @@ const getProducts: ReqHandler = async (req, res, next) => {
       } catch (error) {
         logError(`${req.path} > getProducts handler`, error, true);
       }
-      // console.log("getting products from cache");
       const parsedCachedData = productsCachedQuerySchema.safeParse(cachedData);
       if (parsedCachedData.success) {
+        // console.log("getting products from cache");
         memcached
           .touch(cacheKey, cacheDuration.super)
           .catch(error => logError(`${req.path} > getProducts handler`, error.reason ?? error, false));
@@ -38,6 +38,12 @@ const getProducts: ReqHandler = async (req, res, next) => {
           message: "query success",
           datas: { ...parsedCachedData.data, queries: parsedQueries.data },
         });
+      } else {
+        logError(
+          `${req.path} > getProducts handler`,
+          serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
+          false
+        );
       }
     }
 
@@ -98,9 +104,9 @@ const getProduct: ReqHandler = async (req, res, next) => {
       } catch (error) {
         logError(`${req.path} > getProduct handler`, error, true);
       }
-      // console.log("getting from cache");
       const parsedCachedProductData = productSchema.safeParse(cachedProductData);
       if (parsedCachedProductData.success) {
+        // console.log("getting from cache");
         memcached
           .touch(cacheKey, cacheDuration.short)
           .catch(error => logError(`${req.path} > getProduct handler`, error.reason ?? error, false));
@@ -109,6 +115,12 @@ const getProduct: ReqHandler = async (req, res, next) => {
           message: "product found",
           datas: parsedCachedProductData.data,
         });
+      } else {
+        logError(
+          `${req.path} > getProduct handler`,
+          serializeZodIssues(parsedCachedProductData.error.issues, "failed parsing cache"),
+          false
+        );
       }
     }
 
