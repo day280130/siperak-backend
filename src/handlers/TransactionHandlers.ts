@@ -208,28 +208,64 @@ const getTransaction: ReqHandler = async (req, res, next) => {
   }
 };
 
-const countSums = (products: TransactionProducts) => {
-  const total = products.reduce((sum, current) => (sum += current.quantity * current.product.price), 0);
-  const tax = Math.ceil((11 / 111) * total);
-  const dpp = Math.floor((100 / 111) * total);
-  return { total, tax, dpp };
+type CountSumsResult =
+  | {
+      success: true;
+      result: { total: number; tax: number; dpp: number };
+    }
+  | {
+      success: false;
+      error: Error;
+    };
+
+const countSums = async (products?: TransactionProducts): Promise<CountSumsResult> => {
+  if (!products) return { success: true, result: { total: 0, tax: 0, dpp: 0 } };
+  try {
+    const inputProductCodes = products.map(entry => entry.product.code);
+    const productsData = await prisma.product.findMany({ where: { code: { in: inputProductCodes } } });
+    const validProductCodes = productsData.map(product => product.code);
+    if (inputProductCodes.findIndex(code => !validProductCodes.includes(code)) !== -1)
+      throw new Error("one or more of supplied product code does not exist in database");
+    const productsCodeOnPrice: Record<string, number> = productsData.reduce(
+      (result, current) => ({ ...result, [current.code]: current.price }),
+      {}
+    );
+    const total = products.reduce(
+      (sum, current) => (sum += current.quantity * productsCodeOnPrice[current.product.code]),
+      0
+    );
+    const tax = Math.ceil((11 / 111) * total);
+    const dpp = Math.floor((100 / 111) * total);
+    return { success: true, result: { total, tax, dpp } };
+  } catch (error) {
+    return {
+      success: false,
+      error: error as Error,
+    };
+  }
 };
+
+const transactionCreateSchema = transactionSchema.pick({
+  taxInvoiceNumber: true,
+  customer: true,
+  products: true,
+});
 
 const createTransaction: ReqHandler = async (req, res, next) => {
   try {
-    const inputBody = transactionSchema
-      .omit({
-        id: true,
-        createdAt: true,
-        total: true,
-        tax: true,
-        dpp: true,
-      })
-      .safeParse(req.body);
+    const inputBody = transactionCreateSchema.safeParse(req.body);
     if (!inputBody.success) {
       return res.status(400).json({
         status: "error",
         message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
+      });
+    }
+
+    const sums = await countSums(inputBody.data.products);
+    if (!sums.success) {
+      return res.status(400).json({
+        status: "error",
+        message: sums.error?.message ?? "products not valid for unknown reason",
       });
     }
 
@@ -239,7 +275,7 @@ const createTransaction: ReqHandler = async (req, res, next) => {
         customerName: inputBody.data.customer.name,
         customerAddress: inputBody.data.customer.address,
         customerNpwpNumber: inputBody.data.customer.npwpNumber,
-        ...countSums(inputBody.data.products),
+        ...sums.result,
         products: {
           create: inputBody.data.products.map(entry => ({
             relId: entry.relId,
@@ -289,6 +325,119 @@ const createTransaction: ReqHandler = async (req, res, next) => {
   }
 };
 
+const transactionUpdateSchema = transactionSchema
+  .pick({
+    taxInvoiceNumber: true,
+    customer: true,
+    products: true,
+  })
+  .partial();
+
+const editTransaction: ReqHandler = async (req, res, next) => {
+  try {
+    const paramId = transactionSchema.pick({ id: true }).safeParse(req.params);
+    if (!paramId.success)
+      return res.status(400).json({
+        status: "error",
+        message: "no valid transaction id supplied",
+      });
+
+    const inputBody = transactionUpdateSchema.safeParse(req.body);
+    if (!inputBody.success)
+      return res.status(400).json({
+        status: "error",
+        message: serializeZodIssues(inputBody.error.issues, "request body not valid"),
+      });
+
+    const currentTransaction = await prisma.transaction.findFirst({
+      where: { id: paramId.data.id },
+      select: { id: true, products: true },
+    });
+
+    if (!currentTransaction)
+      return res.status(404).json({
+        status: "error",
+        message: "transaction with supplied id not found",
+      });
+
+    const inputProductsRelIds = inputBody.data.products?.map(entry => entry.relId);
+
+    const deletedProducts = currentTransaction?.products.filter(entry => !inputProductsRelIds?.includes(entry.relId));
+
+    const newSums = await countSums(inputBody.data.products);
+    if (!newSums.success) {
+      return res.status(400).json({
+        status: "error",
+        message: newSums.error?.message ?? "products not valid for unknown reason",
+      });
+    }
+
+    const updateResult = await prisma.transaction.update({
+      where: { id: paramId.data.id },
+      data: {
+        taxInvoiceNumber: inputBody.data.taxInvoiceNumber,
+        customerName: inputBody.data.customer?.name,
+        customerAddress: inputBody.data.customer?.address,
+        customerNpwpNumber: inputBody.data.customer?.npwpNumber,
+        ...newSums.result,
+        products: {
+          deleteMany: {
+            relId: {
+              in: deletedProducts.map(entry => entry.relId),
+            },
+          },
+          upsert: inputBody.data.products?.map(entry => ({
+            where: { relId: entry.relId },
+            update: {
+              quantity: entry.quantity,
+              productCode: entry.product.code,
+            },
+            create: {
+              relId: entry.relId,
+              quantity: entry.quantity,
+              productCode: entry.product.code,
+            },
+          })),
+        },
+      },
+      include: {
+        products: {
+          select: {
+            relId: true,
+            quantity: true,
+            product: { select: { code: true, name: true, price: true } },
+          },
+        },
+      },
+    });
+
+    const { customerAddress, customerName, customerNpwpNumber, ...otherResultProperties } = updateResult;
+    const formattedResult = {
+      ...otherResultProperties,
+      customer: {
+        name: customerName,
+        address: customerAddress,
+        npwpNumber: customerNpwpNumber,
+      },
+    };
+
+    await invalidateCachedQueries(queryKeys.transaction);
+
+    const cacheKey = makeCacheKey(queryKeys.transaction, paramId.data.id);
+    memcached
+      .set(cacheKey, JSON.stringify(formattedResult), cacheDuration.short)
+      .catch(error => logError(`${req.path} > editTransaction handler`, error.reason ?? error, false));
+
+    return res.status(200).json({
+      status: "success",
+      message: "transaction updated",
+      datas: formattedResult,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteTransaction: ReqHandler = async (req, res, next) => {
   try {
     const paramId = transactionSchema.pick({ id: true }).safeParse(req.params);
@@ -321,5 +470,6 @@ export const transactionsHandlers = {
   getTransactions,
   getTransaction,
   createTransaction,
+  editTransaction,
   deleteTransaction,
 };
