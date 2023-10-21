@@ -8,6 +8,7 @@ import {
   transactionQuerySchema,
   transactionSchema,
   TransactionProducts,
+  cachedTransactionSchema,
 } from "@src/schemas/TransactionSchemas.js";
 
 const getTransactions: ReqHandler = async (req, res, next) => {
@@ -125,6 +126,88 @@ const getTransactions: ReqHandler = async (req, res, next) => {
   }
 };
 
+const getTransaction: ReqHandler = async (req, res, next) => {
+  try {
+    const paramId = transactionSchema.pick({ id: true }).safeParse(req.params);
+    if (!paramId.success)
+      return res.status(400).json({
+        status: "error",
+        message: "no valid transaction id supplied",
+      });
+
+    const cacheKey = makeCacheKey(queryKeys.transaction, paramId.data.id);
+    const rawCachedTransactionData = await memcached.get<string>(cacheKey).catch(() => undefined);
+    if (rawCachedTransactionData) {
+      let cachedTransactionData;
+      try {
+        cachedTransactionData = JSON.parse(rawCachedTransactionData.result);
+      } catch (error) {
+        logError(`${req.path} > getTransaction handler`, error, true);
+      }
+      const parsedCachedTransactionData = cachedTransactionSchema.safeParse(cachedTransactionData);
+      if (parsedCachedTransactionData.success) {
+        console.log("getting from cache");
+        memcached
+          .touch(cacheKey, cacheDuration.short)
+          .catch(error => logError(`${req.path} > getTransaction handler`, error.reason ?? error, false));
+        return res.status(200).json({
+          status: "success",
+          message: "transaction found",
+          datas: parsedCachedTransactionData.data,
+        });
+      } else {
+        logError(
+          `${req.path} > getTransaction handler`,
+          serializeZodIssues(parsedCachedTransactionData.error.issues, "failed parsing cache"),
+          false
+        );
+      }
+    }
+
+    const transaction = await prisma.transaction.findFirst({
+      where: { id: paramId.data.id },
+      include: {
+        products: {
+          select: {
+            relId: true,
+            quantity: true,
+            product: { select: { name: true, code: true, price: true } },
+          },
+        },
+      },
+    });
+
+    if (!transaction)
+      return res.status(404).json({
+        status: "error",
+        message: "transaction with supplied id not found",
+      });
+
+    const { customerAddress, customerName, customerNpwpNumber, ...otherTransactionProperties } = transaction;
+
+    const formattedTransaction = {
+      ...otherTransactionProperties,
+      customer: {
+        name: customerName,
+        npwpNumber: customerNpwpNumber,
+        address: customerAddress,
+      },
+    };
+
+    memcached
+      .set(cacheKey, JSON.stringify(formattedTransaction), cacheDuration.short)
+      .catch(error => logError(`${req.path} > getTransaction handler`, error.reason ?? error, false));
+
+    return res.status(200).json({
+      status: "success",
+      message: "transaction found",
+      datas: formattedTransaction,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const countSums = (products: TransactionProducts) => {
   const total = products.reduce((sum, current) => (sum += current.quantity * current.product.price), 0);
   const tax = Math.ceil((11 / 111) * total);
@@ -194,7 +277,7 @@ const createTransaction: ReqHandler = async (req, res, next) => {
     });
   } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2003") {
-      console.log(error);
+      // console.log(error);
       if (error.meta?.field_name === "product_code") {
         return res.status(409).json({
           status: "error",
@@ -236,6 +319,7 @@ const deleteTransaction: ReqHandler = async (req, res, next) => {
 
 export const transactionsHandlers = {
   getTransactions,
+  getTransaction,
   createTransaction,
   deleteTransaction,
 };

@@ -58,6 +58,17 @@ export const transactionSchema = z.object({
 
 export type TransactionProducts = z.infer<typeof transactionSchema.shape.products>;
 
+export const cachedTransactionSchema = transactionSchema.extend({
+  taxInvoiceNumber: z.nullable(transactionSchema.shape.taxInvoiceNumber),
+  products: z.array(
+    z.object({
+      relId: z.string().uuid(),
+      product: z.nullable(productSchema),
+      quantity: z.number().nonnegative(),
+    })
+  ),
+});
+
 export const transactionQuerySchema = baseQuerySchema.extend({
   customer_name: z.string().optional(),
   customer_npwp: z.string().optional(),
