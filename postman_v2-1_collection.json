@@ -2297,6 +2297,90 @@
 								}
 							},
 							"response": []
+						},
+						{
+							"name": "Post Product 3",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 201\", function () {\r",
+											"    pm.response.to.have.status(201);\r",
+											"});\r",
+											"\r",
+											"pm.test('response header Content-Type should be application/json', () => {\r",
+											"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+											"});\r",
+											"\r",
+											"const responseJson = pm.response.json();\r",
+											"\r",
+											"pm.test('response body should be an object', () => {\r",
+											"    pm.expect(responseJson).to.be.an('object');\r",
+											"});\r",
+											"\r",
+											"pm.test('response body should have correct property and value', () => {\r",
+											"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+											"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+											"    pm.expect(responseJson).to.haveOwnProperty('datas');\r",
+											"\r",
+											"    pm.expect(responseJson.status).to.equals('success');\r",
+											"    pm.expect(responseJson.message).to.equals('product created');\r",
+											"    pm.expect(responseJson.datas).to.be.an('object');\r",
+											"});\r",
+											"\r",
+											"const { datas } = responseJson\r",
+											"\r",
+											"pm.test('response body datas should have correct property', () => {\r",
+											"    pm.expect(datas).to.haveOwnProperty('code');\r",
+											"    pm.expect(datas).to.haveOwnProperty('name');\r",
+											"    pm.expect(datas).to.haveOwnProperty('price');\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{adminAccessToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "x-refresh-token",
+										"value": "{{adminRefreshToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"code\": \"{{product3Code}}\",\r\n    \"name\": \"{{product3Name}}\",\r\n    \"price\": {{product3Price}}\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}:{{port}}/products",
+									"host": [
+										"{{url}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"products"
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -2594,6 +2678,7 @@
 											"\r",
 											"pm.test('response body datas property should have the correct value', () => {\r",
 											"    pm.expect(datas.id).to.be.equals(pm.environment.get(\"trans1Id\"));\r",
+											"    pm.expect(datas.taxInvoiceNumber).to.be.equals(null);\r",
 											"    pm.expect(datas.customer).to.be.an(\"object\");\r",
 											"    pm.expect(datas.products).to.be.an(\"array\");\r",
 											"    pm.expect(datas.total).to.be.equals(expectedTotal);\r",
@@ -2680,7 +2765,7 @@
 							"response": []
 						},
 						{
-							"name": "Put Product",
+							"name": "Put Transaction",
 							"event": [
 								{
 									"listen": "test",
@@ -2706,27 +2791,90 @@
 											"    pm.expect(responseJson).to.haveOwnProperty('datas');\r",
 											"\r",
 											"    pm.expect(responseJson.status).to.equals('success');\r",
-											"    pm.expect(responseJson.message).to.equals('product updated');\r",
+											"    pm.expect(responseJson.message).to.equals('transaction updated');\r",
 											"    pm.expect(responseJson.datas).to.be.an('object');\r",
 											"});\r",
 											"\r",
 											"const { datas } = responseJson\r",
 											"\r",
 											"pm.test('response body datas should have correct property', () => {\r",
-											"    pm.expect(datas).to.haveOwnProperty('code');\r",
-											"    pm.expect(datas).to.haveOwnProperty('name');\r",
-											"    pm.expect(datas).to.haveOwnProperty('price');\r",
+											"    pm.expect(datas).to.haveOwnProperty('id');\r",
+											"    pm.expect(datas).to.haveOwnProperty('taxInvoiceNumber');\r",
+											"    pm.expect(datas).to.haveOwnProperty('customer');\r",
+											"    pm.expect(datas).to.haveOwnProperty('products');\r",
+											"    pm.expect(datas).to.haveOwnProperty('total');\r",
+											"    pm.expect(datas).to.haveOwnProperty('tax');\r",
+											"    pm.expect(datas).to.haveOwnProperty('dpp');\r",
+											"    pm.expect(datas).to.haveOwnProperty('createdAt');\r",
 											"});\r",
 											"\r",
-											"pm.test('response body datas property should have the correct value', () => {\r",
-											"    pm.expect(datas.code).to.be.equals(pm.environment.get(\"product1Code\"));\r",
+											"const product1Price = pm.environment.get(\"product1Price\");\r",
+											"const product1Quantity = pm.environment.get(\"trans1Product1NewQuantity\");\r",
+											"const product2Price = pm.environment.get(\"product3Price\");\r",
+											"const product2Quantity = pm.environment.get(\"trans1Product2Quantity\");\r",
 											"\r",
-											"    pm.expect(datas.name).to.be.not.equals(pm.environment.get(\"product1Name\"));\r",
-											"    pm.expect(datas.price).to.be.not.equals(parseInt(pm.environment.get(\"product1Price\")));\r",
+											"const expectedTotal = (product1Price * product1Quantity) + (product2Price * product2Quantity);\r",
+											"\r",
+											"pm.test('response body datas property should have the correct value', () => {\r",
+											"    pm.expect(datas.id).to.be.equals(pm.environment.get(\"trans1Id\"));\r",
+											"    pm.expect(datas.taxInvoiceNumber).to.be.equals(pm.environment.get(\"trans1TaxInvoiceNumber\"));\r",
+											"    pm.expect(datas.customer).to.be.an(\"object\");\r",
+											"    pm.expect(datas.products).to.be.an(\"array\");\r",
+											"    pm.expect(datas.total).to.be.equals(expectedTotal);\r",
+											"    pm.expect(datas.tax).to.be.equals(Math.ceil((11/111) * expectedTotal));\r",
+											"    pm.expect(datas.dpp).to.be.equals(Math.floor((100/111) * expectedTotal));\r",
+											"});\r",
+											"\r",
+											"pm.test('customer data should have the correct value', () => {\r",
+											"    pm.expect(datas.customer).to.haveOwnProperty('name');\r",
+											"    pm.expect(datas.customer).to.haveOwnProperty('address');\r",
+											"    pm.expect(datas.customer).to.haveOwnProperty('npwpNumber');\r",
+											"    const {customer} = datas;\r",
+											"    pm.expect(customer.name).to.be.equals(pm.environment.get(\"customer1NewName\"));\r",
+											"    pm.expect(customer.address).to.be.equals(pm.environment.get(\"customer1NewAddress\"));\r",
+											"    pm.expect(customer.npwpNumber).to.be.equals(pm.environment.get(\"customer1NewNpwp\"));\r",
+											"});\r",
+											"\r",
+											"pm.test('products should have the correct product entries', () => {\r",
+											"    pm.expect(datas.products).to.have.lengthOf(2);\r",
+											"    const {products: entries} = datas\r",
 											"    \r",
-											"    pm.expect(datas.name).to.be.equals(pm.environment.get(\"product1NewName\"));\r",
-											"    pm.expect(datas.price).to.be.equals(parseInt(pm.environment.get(\"product1NewPrice\")));\r",
+											"    const expectedEntry1RelId = pm.environment.get(\"trans1Product1RelId\");\r",
+											"    const entry1Index = entries.findIndex(entry => entry.relId === expectedEntry1RelId);\r",
+											"    pm.expect(entry1Index).to.be.not.equals(-1);\r",
+											"    pm.expect(entries[entry1Index]).to.haveOwnProperty('quantity');\r",
+											"    pm.expect(entries[entry1Index].quantity).to.be.equals(parseInt(pm.environment.get('trans1Product1NewQuantity')));\r",
+											"    pm.expect(entries[entry1Index]).to.haveOwnProperty('product');\r",
+											"    pm.expect(entries[entry1Index].product).to.haveOwnProperty('code');\r",
+											"    pm.expect(entries[entry1Index].product.code).to.be.equals(pm.environment.get('product1Code'));\r",
+											"    pm.expect(entries[entry1Index].product).to.haveOwnProperty('name');\r",
+											"    pm.expect(entries[entry1Index].product.name).to.be.equals(pm.environment.get('product1Name'));\r",
+											"    pm.expect(entries[entry1Index].product).to.haveOwnProperty('price');\r",
+											"    pm.expect(entries[entry1Index].product.price).to.be.equals(parseInt(pm.environment.get('product1Price')));\r",
+											"\r",
+											"    const expectedEntry2RelId = pm.environment.get(\"trans1Product3RelId\");\r",
+											"    const entry2Index = entries.findIndex(entry => entry.relId === expectedEntry2RelId);\r",
+											"    pm.expect(entry2Index).to.be.not.equals(-1);\r",
+											"    pm.expect(entries[entry2Index]).to.haveOwnProperty('quantity');\r",
+											"    pm.expect(entries[entry2Index].quantity).to.be.equals(parseInt(pm.environment.get('trans1Product2Quantity')));\r",
+											"    pm.expect(entries[entry2Index]).to.haveOwnProperty('product');\r",
+											"    pm.expect(entries[entry2Index].product).to.haveOwnProperty('code');\r",
+											"    pm.expect(entries[entry2Index].product.code).to.be.equals(pm.environment.get('product3Code'));\r",
+											"    pm.expect(entries[entry2Index].product).to.haveOwnProperty('name');\r",
+											"    pm.expect(entries[entry2Index].product.name).to.be.equals(pm.environment.get('product3Name'));\r",
+											"    pm.expect(entries[entry2Index].product).to.haveOwnProperty('price');\r",
+											"    pm.expect(entries[entry2Index].product.price).to.be.equals(parseInt(pm.environment.get('product3Price')));\r",
 											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const uuid = require('uuid');\r",
+											"pm.environment.set(\"trans1Product3RelId\", uuid());"
 										],
 										"type": "text/javascript"
 									}
@@ -2753,7 +2901,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"name\": \"{{product1NewName}}\",\r\n    \"price\": {{product1NewPrice}}\r\n}",
+									"raw": "{\r\n    \"taxInvoiceNumber\": \"{{trans1TaxInvoiceNumber}}\",\r\n    \"customer\": {\r\n        \"name\": \"{{customer1NewName}}\",\r\n        \"address\": \"{{customer1NewAddress}}\",\r\n        \"npwpNumber\": \"{{customer1NewNpwp}}\"\r\n    },\r\n    \"products\": [\r\n        {\r\n            \"relId\": \"{{trans1Product1RelId}}\",\r\n            \"quantity\": {{trans1Product1NewQuantity}},\r\n            \"product\": {\r\n                \"code\": \"{{product1Code}}\",\r\n                \"name\": \"{{product1Name}}\",\r\n                \"price\": {{product1Price}}\r\n            }\r\n        },\r\n        {\r\n            \"relId\": \"{{trans1Product3RelId}}\",\r\n            \"quantity\": {{trans1Product2Quantity}},\r\n            \"product\": {\r\n                \"code\": \"{{product3Code}}\",\r\n                \"name\": \"{{product3Name}}\",\r\n                \"price\": {{product3Price}}\r\n            }\r\n        }\r\n    ]\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2761,14 +2909,14 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}:{{port}}/products/{{product1Code}}",
+									"raw": "{{url}}:{{port}}/transactions/{{trans1Id}}",
 									"host": [
 										"{{url}}"
 									],
 									"port": "{{port}}",
 									"path": [
-										"products",
-										"{{product1Code}}"
+										"transactions",
+										"{{trans1Id}}"
 									]
 								}
 							},
@@ -2816,6 +2964,9 @@
 											"        });\r",
 											"\r",
 											"        pm.environment.set(\"trans1Id\", \"\");\r",
+											"        pm.environment.set(\"trans1Product1RelId\", \"\");\r",
+											"        pm.environment.set(\"trans1Product2RelId\", \"\");\r",
+											"        pm.environment.set(\"trans1Product3RelId\", \"\");\r",
 											"    },\r",
 											");"
 										],
@@ -3016,6 +3167,86 @@
 									"path": [
 										"products",
 										"{{product2Code}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Product 3",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"pm.test('response header Content-Type should be application/json', () => {\r",
+											"    pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');\r",
+											"});\r",
+											"\r",
+											"const responseJson = pm.response.json();\r",
+											"\r",
+											"pm.test('response body should be an object', () => {\r",
+											"    pm.expect(responseJson).to.be.an('object');\r",
+											"});\r",
+											"\r",
+											"pm.test('response body should have correct property and value', () => {\r",
+											"    pm.expect(responseJson).to.haveOwnProperty('status');\r",
+											"    pm.expect(responseJson).to.haveOwnProperty('message');\r",
+											"\r",
+											"    pm.expect(responseJson.status).to.equals('success');\r",
+											"    pm.expect(responseJson.message).to.equals('product deleted');\r",
+											"});\r",
+											"\r",
+											"pm.sendRequest(\r",
+											"    {\r",
+											"        url: `http://${pm.environment.get(\"url\")}:${pm.environment.get('port')}/products/${pm.environment.get('product3Code')}`,\r",
+											"        header: {\r",
+											"            \"authorization\": `Bearer ${pm.environment.get(\"adminAccessToken\")}`\r",
+											"        },\r",
+											"    }, \r",
+											"    (_, response) => {\r",
+											"        pm.test('product have to be deleted', () => {\r",
+											"            pm.expect(response.code).to.equals(404);\r",
+											"        });\r",
+											"    },\r",
+											");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{adminAccessToken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "x-refresh-token",
+										"value": "{{adminRefreshToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{url}}:{{port}}/products/{{product3Code}}",
+									"host": [
+										"{{url}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"products",
+										"{{product3Code}}"
 									]
 								}
 							},
