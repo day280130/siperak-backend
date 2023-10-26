@@ -35,7 +35,7 @@ const getTransactions: ReqHandler = async (req, res, next) => {
       }
       const parsedCachedData = transactionsCachedQuerySchema.safeParse(cachedData);
       if (parsedCachedData.success) {
-        console.log("getting transactions from cache");
+        // console.log("getting transactions from cache");
         memcached
           .touch(cacheKey, cacheDuration.super)
           .catch(error => logError(`${req.path} > getTransactions handler`, error.reason ?? error, false));
@@ -53,7 +53,7 @@ const getTransactions: ReqHandler = async (req, res, next) => {
       }
     }
 
-    console.log("getting transactions from db");
+    // console.log("getting transactions from db");
     const where: Prisma.TransactionWhereInput = {
       customerName: {
         contains: parsedQueries.data.customer_name ?? "",
