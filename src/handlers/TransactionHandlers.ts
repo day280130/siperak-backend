@@ -76,6 +76,12 @@ const getTransactions: ReqHandler = async (req, res, next) => {
         gte: parsedQueries.data.tax_min,
         lte: parsedQueries.data.tax_max,
       },
+      taxInvoiceNumber:
+        parsedQueries.data.status === "paid"
+          ? { not: null }
+          : parsedQueries.data.status === "unpaid"
+          ? null
+          : undefined,
       createdAt: {
         gte: new Date(parsedQueries.data.created_date_min),
         lte: new Date(parsedQueries.data.created_date_max),
