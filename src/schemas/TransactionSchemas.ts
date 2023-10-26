@@ -60,6 +60,11 @@ export type TransactionProducts = z.infer<typeof transactionSchema.shape.product
 
 export const cachedTransactionSchema = transactionSchema.extend({
   taxInvoiceNumber: z.nullable(transactionSchema.shape.taxInvoiceNumber),
+  customer: z.object({
+    name: transactionSchema.shape.customer.shape.name,
+    address: z.nullable(transactionSchema.shape.customer.shape.address),
+    npwpNumber: transactionSchema.shape.customer.shape.npwpNumber,
+  }),
   products: z.array(
     z.object({
       relId: z.string().uuid(),
@@ -90,5 +95,5 @@ export const transactionQuerySchema = baseQuerySchema.extend({
 });
 
 export const transactionsCachedQuerySchema = baseCachedQuerySchema.extend({
-  datas: z.array(transactionSchema),
+  datas: z.array(cachedTransactionSchema),
 });
