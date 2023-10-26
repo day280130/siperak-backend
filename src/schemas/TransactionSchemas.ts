@@ -94,6 +94,8 @@ export const transactionQuerySchema = baseQuerySchema.extend({
   order_by: z.enum(["created_at", "customer", "tax", "total"]).default("created_at"),
 });
 
+export type TransactionQueryOrderBy = z.infer<typeof transactionQuerySchema.shape.order_by>;
+
 export const transactionsCachedQuerySchema = baseCachedQuerySchema.extend({
   datas: z.array(cachedTransactionSchema),
 });

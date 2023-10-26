@@ -9,7 +9,14 @@ import {
   transactionSchema,
   TransactionProducts,
   cachedTransactionSchema,
+  TransactionQueryOrderBy,
 } from "@src/schemas/TransactionSchemas.js";
+
+const parseOrderBy = (orderBy: TransactionQueryOrderBy) => {
+  if (orderBy === "customer") return "customer_name";
+
+  return orderBy;
+};
 
 const getTransactions: ReqHandler = async (req, res, next) => {
   try {
@@ -74,6 +81,9 @@ const getTransactions: ReqHandler = async (req, res, next) => {
         lte: new Date(parsedQueries.data.created_date_max),
       },
     };
+
+    const parsedOrderBy = parseOrderBy(parsedQueries.data.order_by);
+
     const transactions = (
       await prisma.transaction.findMany({
         where,
@@ -95,7 +105,7 @@ const getTransactions: ReqHandler = async (req, res, next) => {
           dpp: true,
           createdAt: true,
         },
-        orderBy: { [snakeToCamel(parsedQueries.data.order_by)]: parsedQueries.data.sort },
+        orderBy: { [snakeToCamel(parsedOrderBy)]: parsedQueries.data.sort },
         skip: parsedQueries.data.page * parsedQueries.data.limit,
         take: parsedQueries.data.limit,
       })
