@@ -83,6 +83,13 @@ const getTransactions: ReqHandler = async (req, res, next) => {
           customerName: true,
           customerAddress: true,
           customerNpwpNumber: true,
+          products: {
+            select: {
+              relId: true,
+              quantity: true,
+              product: { select: { code: true, name: true, price: true } },
+            },
+          },
           total: true,
           tax: true,
           dpp: true,

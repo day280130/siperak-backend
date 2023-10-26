@@ -90,5 +90,5 @@ export const transactionQuerySchema = baseQuerySchema.extend({
 });
 
 export const transactionsCachedQuerySchema = baseCachedQuerySchema.extend({
-  datas: z.array(transactionSchema.omit({ products: true })),
+  datas: z.array(transactionSchema),
 });
