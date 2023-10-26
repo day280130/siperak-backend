@@ -28,7 +28,7 @@ export const transactionSchema = z.object({
       .string()
       .max(255, { message: "customer address too long, max 255 characters" })
       .trim()
-      .refine(val => validator.isAlphanumeric(val, "en-US", { ignore: " ./:-" }), {
+      .refine(val => validator.isAlphanumeric(val, "en-US", { ignore: " ./:-" }) || val === "", {
         message: "allowed characters: alphanumeric, space, '.', '/', ':', and '-'",
       })
       .transform(val => validator.escape(val))
