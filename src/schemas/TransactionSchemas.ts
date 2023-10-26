@@ -91,6 +91,7 @@ export const transactionQuerySchema = baseQuerySchema.extend({
   tax_max: z.coerce.number().gte(1).lte(Number.MAX_SAFE_INTEGER).default(Number.MAX_SAFE_INTEGER),
   created_date_min: z.string().datetime().default("1970-01-01T00:00:00.000Z"),
   created_date_max: z.string().datetime().default(new Date(Date.now()).toISOString()),
+  status: z.enum(["paid", "unpaid", "unset"]).default('unset'),
   order_by: z.enum(["created_at", "customer", "tax", "total"]).default("created_at"),
 });
 
