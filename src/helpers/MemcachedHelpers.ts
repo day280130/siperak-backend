@@ -96,7 +96,7 @@ export const getCachedQueryKeys = async (field: string) => {
     }))
   ).result;
   const cachedQueryKeysArr = JSON.parse(cachedQueryKeys);
-  console.log(`cached ${field} query keys :`, cachedQueryKeysArr);
+  // console.log(`cached ${field} query keys :`, cachedQueryKeysArr);
 
   return cachedQueryKeysArr as string[];
 };
@@ -113,7 +113,7 @@ export const registerCachedQueryKey = async (field: string, cacheKey: string) =>
 
   // push the new cached query key
   cachedQueryKeysArr.push(cacheKey);
-  console.log(`updated ${field} query keys(new) :`, cachedQueryKeysArr);
+  // console.log(`updated ${field} query keys(new) :`, cachedQueryKeysArr);
 
   // put the list back to cache
   memcached
@@ -133,7 +133,7 @@ export const eraseCachedQueryKey = async (field: string, cacheKey: string) => {
 
   // filter the cacheKey out
   const newCachedQueryKeysArr = cachedQueryKeysArr.filter(value => value !== cacheKey);
-  console.log(`updated ${field} query keys(delete) :`, newCachedQueryKeysArr);
+  // console.log(`updated ${field} query keys(delete) :`, newCachedQueryKeysArr);
 
   // put the list back to cache
   memcached
@@ -151,7 +151,7 @@ export const invalidateCachedQueries = async (field: string) => {
   }
   const cachedQueryKeysArr = z.array(z.string()).min(1).safeParse(JSON.parse(cachedQueryKeys));
   if (!cachedQueryKeysArr.success) return;
-  console.log(`deleted ${field} query keys :`, cachedQueryKeysArr.data);
+  // console.log(`deleted ${field} query keys :`, cachedQueryKeysArr.data);
 
   // loop through the array and delete each cached query
   cachedQueryKeysArr.data.forEach(cachedQueryKey => memcached.del(cachedQueryKey).catch());
