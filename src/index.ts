@@ -55,6 +55,6 @@ if (port === 0) {
 }
 app.listen(port, () => {
   if (process.env.NODE_ENV === "development") {
-    console.log(`Server started at http://localhost:${port}`);
+    console.log(`Server started at port: ${port}`);
   }
 });
