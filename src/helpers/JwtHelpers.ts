@@ -6,23 +6,32 @@ import {
   refreshTokenConfig,
 } from "@src/configs/JwtConfigs.js";
 import jwt from "jsonwebtoken";
+import { createHash, randomBytes } from "crypto";
 
 const sign = async (tokenType: "REFRESH_TOKEN" | "ACCESS_TOKEN", initialPayload: JWTPayload) => {
-  let config: jwt.SignOptions;
-  let secret: jwt.Secret;
-  if (tokenType === "ACCESS_TOKEN") {
-    config = accessTokenConfig;
-    secret = ACCESS_TOKEN_SECRET;
-  } else if (tokenType === "REFRESH_TOKEN") {
-    config = refreshTokenConfig;
-    secret = REFRESH_TOKEN_SECRET;
-  } else {
-    return new Promise<string>((_resolve, reject) => {
-      reject("valid token type not supplied");
-    });
-  }
+  const config = tokenType === "ACCESS_TOKEN" ? accessTokenConfig : refreshTokenConfig;
+  const secret = tokenType === "ACCESS_TOKEN" ? ACCESS_TOKEN_SECRET : REFRESH_TOKEN_SECRET;
+  // let config: jwt.SignOptions;
+  // let secret: jwt.Secret;
+  // if (tokenType === "ACCESS_TOKEN") {
+  //   config = accessTokenConfig;
+  //   secret = ACCESS_TOKEN_SECRET;
+  // } else if (tokenType === "REFRESH_TOKEN") {
+  //   config = refreshTokenConfig;
+  //   secret = REFRESH_TOKEN_SECRET;
+  // } else {
+  //   return new Promise<string>((_resolve, reject) => {
+  //     reject("valid token type not supplied");
+  //   });
+  // }
+  const randomData = randomBytes(128).toString();
+  const randomHash = createHash("sha256").update(randomData).digest("hex");
+  const payload: JWTPayload = {
+    ...initialPayload,
+    randomHash,
+  };
   return new Promise<string>((resolve, reject) => {
-    jwt.sign(initialPayload, secret, config, (error, token) => {
+    jwt.sign(payload, secret, config, (error, token) => {
       if (error || !token) {
         reject(error ?? "error");
       } else {
@@ -33,19 +42,21 @@ const sign = async (tokenType: "REFRESH_TOKEN" | "ACCESS_TOKEN", initialPayload:
 };
 
 const verify = async (tokenType: "REFRESH_TOKEN" | "ACCESS_TOKEN", token: string) => {
-  let config: jwt.VerifyOptions;
-  let secret: jwt.Secret;
-  if (tokenType === "ACCESS_TOKEN") {
-    config = accessTokenConfig;
-    secret = ACCESS_TOKEN_SECRET;
-  } else if (tokenType === "REFRESH_TOKEN") {
-    config = refreshTokenConfig;
-    secret = REFRESH_TOKEN_SECRET;
-  } else {
-    return new Promise<string>((_resolve, reject) => {
-      reject("valid token type not supplied");
-    });
-  }
+  const config: jwt.VerifyOptions = tokenType === "ACCESS_TOKEN" ? accessTokenConfig : refreshTokenConfig;
+  const secret = tokenType === "ACCESS_TOKEN" ? ACCESS_TOKEN_SECRET : REFRESH_TOKEN_SECRET;
+  // let config: jwt.VerifyOptions;
+  // let secret: jwt.Secret;
+  // if (tokenType === "ACCESS_TOKEN") {
+  //   config = accessTokenConfig;
+  //   secret = ACCESS_TOKEN_SECRET;
+  // } else if (tokenType === "REFRESH_TOKEN") {
+  //   config = refreshTokenConfig;
+  //   secret = REFRESH_TOKEN_SECRET;
+  // } else {
+  //   return new Promise<string>((_resolve, reject) => {
+  //     reject("valid token type not supplied");
+  //   });
+  // }
   return new Promise<JWTPayload>((resolve, reject) => {
     jwt.verify(token, secret, config, (error, payload) => {
       if (error) {

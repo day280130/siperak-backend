@@ -40,6 +40,7 @@ export const checkAccessToken: ReqHandler = async (req, res, next) => {
       (error instanceof MemcachedMethodError && error.message === "cache miss") ||
       error instanceof TokenExpiredError
     ) {
+      // console.log("access token expired error: ", error);
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.ACCESS_TOKEN_EXPIRED,
@@ -51,6 +52,7 @@ export const checkAccessToken: ReqHandler = async (req, res, next) => {
       (error instanceof Error && error.message === AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE) ||
       error instanceof JsonWebTokenError
     ) {
+      // console.log("access token invalid error: ", error);
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.ACCESS_TOKEN_NOT_VALID_MESSAGE,
@@ -94,6 +96,7 @@ export const checkRefreshToken: ReqHandler = async (req, res, next) => {
       (error instanceof MemcachedMethodError && error.message === "cache miss") ||
       error instanceof TokenExpiredError
     ) {
+      // console.log("refresh token expired error: ", error);
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.REFRESH_TOKEN_EXPIRED,
@@ -105,6 +108,7 @@ export const checkRefreshToken: ReqHandler = async (req, res, next) => {
       (error instanceof Error && error.message === AuthErrorMessages.REFRESH_TOKEN_NOT_VALID_MESSAGE) ||
       error instanceof JsonWebTokenError
     ) {
+      // console.log("refresh token invalid error: ", error);
       return res.status(401).json({
         status: "error",
         message: AuthErrorMessages.REFRESH_TOKEN_NOT_VALID_MESSAGE,

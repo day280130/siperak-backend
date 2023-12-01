@@ -19,7 +19,11 @@ export const refreshTokenVerifyConfig: VerifyOptions = {
   algorithms: ["HS512"],
 };
 
-export type JWTPayload = JwtPayload & UserSafeData;
+export type JWTPayload = JwtPayload &
+  UserSafeData & {
+    // to make sure every generated jwt is different
+    randomHash?: string;
+  };
 
 export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "super secret access token";
 export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "super secret refresh token";
