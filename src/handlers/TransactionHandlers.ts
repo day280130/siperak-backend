@@ -169,7 +169,7 @@ const getTransaction: ReqHandler = async (req, res, next) => {
       }
       const parsedCachedTransactionData = cachedTransactionSchema.safeParse(cachedTransactionData);
       if (parsedCachedTransactionData.success) {
-        console.log("getting from cache");
+        // console.log("getting from cache");
         memcached
           .touch(cacheKey, cacheDuration.short)
           .catch(error => logError(`${req.path} > getTransaction handler`, error.reason ?? error, false));
