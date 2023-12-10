@@ -1,9 +1,17 @@
 import { Prisma } from "@prisma/client";
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
 import { snakeToCamel, logError, serializeZodIssues, ReqHandler } from "@src/helpers/HandlerHelpers.js";
-import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
+import {
+  invalidateCachedQueries,
+  memcached,
+  // registerCachedQueryKey
+} from "@src/helpers/MemcachedHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
-import { productSchema, productQuerySchema, productsCachedQuerySchema } from "@src/schemas/ProductSchemas.js";
+import {
+  productSchema,
+  productQuerySchema,
+  // productsCachedQuerySchema
+} from "@src/schemas/ProductSchemas.js";
 
 const getProducts: ReqHandler = async (req, res, next) => {
   try {
@@ -14,38 +22,38 @@ const getProducts: ReqHandler = async (req, res, next) => {
         message: serializeZodIssues(parsedQueries.error.issues, "invalid query shape"),
       });
 
-    const cacheKey = makeCacheKey(
-      queryKeys.product,
-      ...Object.values(parsedQueries.data).map(query => query.toString())
-    );
+    // const cacheKey = makeCacheKey(
+    //   queryKeys.product,
+    //   ...Object.values(parsedQueries.data).map(query => query.toString())
+    // );
 
-    const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
-    if (rawCachedData) {
-      let cachedData;
-      try {
-        cachedData = JSON.parse(rawCachedData.result);
-      } catch (error) {
-        logError(`${req.path} > getProducts handler`, error, true);
-      }
-      const parsedCachedData = productsCachedQuerySchema.safeParse(cachedData);
-      if (parsedCachedData.success) {
-        // console.log("getting products from cache");
-        memcached
-          .touch(cacheKey, cacheDuration.super)
-          .catch(error => logError(`${req.path} > getProducts handler`, error.reason ?? error, false));
-        return res.status(200).json({
-          status: "success",
-          message: "query success",
-          datas: { ...parsedCachedData.data, queries: parsedQueries.data },
-        });
-      } else {
-        logError(
-          `${req.path} > getProducts handler`,
-          serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
-          false
-        );
-      }
-    }
+    // const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
+    // if (rawCachedData) {
+    //   let cachedData;
+    //   try {
+    //     cachedData = JSON.parse(rawCachedData.result);
+    //   } catch (error) {
+    //     logError(`${req.path} > getProducts handler`, error, true);
+    //   }
+    //   const parsedCachedData = productsCachedQuerySchema.safeParse(cachedData);
+    //   if (parsedCachedData.success) {
+    //     // console.log("getting products from cache");
+    //     memcached
+    //       .touch(cacheKey, cacheDuration.super)
+    //       .catch(error => logError(`${req.path} > getProducts handler`, error.reason ?? error, false));
+    //     return res.status(200).json({
+    //       status: "success",
+    //       message: "query success",
+    //       datas: { ...parsedCachedData.data, queries: parsedQueries.data },
+    //     });
+    //   } else {
+    //     logError(
+    //       `${req.path} > getProducts handler`,
+    //       serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
+    //       false
+    //     );
+    //   }
+    // }
 
     // console.log("getting products from db");
     const where: Prisma.ProductWhereInput = {
@@ -70,10 +78,10 @@ const getProducts: ReqHandler = async (req, res, next) => {
     const productsCount = await prisma.product.count({ where });
     const maxPage = Math.ceil(productsCount / parsedQueries.data.limit) - 1;
 
-    memcached
-      .set(cacheKey, JSON.stringify({ datas: products, maxPage, dataCount: productsCount }), cacheDuration.super)
-      .catch(error => logError(`${req.path} > getProducts handler`, error.reason ?? error, false));
-    registerCachedQueryKey(queryKeys.product, cacheKey);
+    // memcached
+    //   .set(cacheKey, JSON.stringify({ datas: products, maxPage, dataCount: productsCount }), cacheDuration.super)
+    //   .catch(error => logError(`${req.path} > getProducts handler`, error.reason ?? error, false));
+    // registerCachedQueryKey(queryKeys.product, cacheKey);
 
     return res.status(200).json({
       status: "success",

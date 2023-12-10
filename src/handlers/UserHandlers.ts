@@ -2,7 +2,11 @@ import { Prisma } from "@prisma/client";
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
 import { snakeToCamel, logError, serializeZodIssues, ReqHandler } from "@src/helpers/HandlerHelpers.js";
 import { jwtPromisified } from "@src/helpers/JwtHelpers.js";
-import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
+import {
+  invalidateCachedQueries,
+  memcached,
+  // registerCachedQueryKey
+} from "@src/helpers/MemcachedHelpers.js";
 import { PASSWORD_SECRET, scryptPromisified } from "@src/helpers/PasswordHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
 import {
@@ -10,7 +14,7 @@ import {
   userSafeNoIDSchema,
   userSafeSchema,
   userSchema,
-  usersDataCachedQuerySchema,
+  // usersDataCachedQuerySchema,
 } from "@src/schemas/UserSchemas.js";
 import { string as zodString, object as zodObject } from "zod";
 
@@ -27,37 +31,37 @@ const getUsersData: ReqHandler = async (req, res, next) => {
       });
 
     // form cache key for caching
-    const cacheKey = makeCacheKey(queryKeys.user, ...Object.values(parsedQueries.data).map(query => query.toString()));
+    // const cacheKey = makeCacheKey(queryKeys.user, ...Object.values(parsedQueries.data).map(query => query.toString()));
 
     // check if the same users query already cached
-    const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
-    let cachedData;
-    if (rawCachedData) {
-      try {
-        cachedData = JSON.parse(rawCachedData.result);
-      } catch (error) {
-        logError(`${req.path} > getUsersData handler`, error, true);
-      }
-      // use it and prolong its duration if present
-      const parsedCachedData = usersDataCachedQuerySchema.safeParse(cachedData);
-      if (parsedCachedData.success) {
-        // console.log("getting users from cache");
-        memcached
-          .touch(cacheKey, cacheDuration.super)
-          .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
-        return res.status(200).json({
-          status: "success",
-          message: "query success",
-          datas: { ...parsedCachedData.data, queries: parsedQueries.data },
-        });
-      } else {
-        logError(
-          `${req.path} > getUsersData handler`,
-          serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
-          false
-        );
-      }
-    }
+    // const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
+    // let cachedData;
+    // if (rawCachedData) {
+    //   try {
+    //     cachedData = JSON.parse(rawCachedData.result);
+    //   } catch (error) {
+    //     logError(`${req.path} > getUsersData handler`, error, true);
+    //   }
+    //   // use it and prolong its duration if present
+    //   const parsedCachedData = usersDataCachedQuerySchema.safeParse(cachedData);
+    //   if (parsedCachedData.success) {
+    //     // console.log("getting users from cache");
+    //     memcached
+    //       .touch(cacheKey, cacheDuration.super)
+    //       .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
+    //     return res.status(200).json({
+    //       status: "success",
+    //       message: "query success",
+    //       datas: { ...parsedCachedData.data, queries: parsedQueries.data },
+    //     });
+    //   } else {
+    //     logError(
+    //       `${req.path} > getUsersData handler`,
+    //       serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
+    //       false
+    //     );
+    //   }
+    // }
 
     // get from db if not
     // console.log("getting users from db");
@@ -84,10 +88,10 @@ const getUsersData: ReqHandler = async (req, res, next) => {
     const maxPage = Math.ceil(usersCount / parsedQueries.data.limit) - 1;
 
     // cache it in case the same query is requested in further request
-    memcached
-      .set(cacheKey, JSON.stringify({ datas: users, maxPage, dataCount: usersCount }), cacheDuration.super)
-      .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
-    registerCachedQueryKey(queryKeys.user, cacheKey);
+    // memcached
+    //   .set(cacheKey, JSON.stringify({ datas: users, maxPage, dataCount: usersCount }), cacheDuration.super)
+    //   .catch(error => logError(`${req.path} > getUsersData handler`, error.reason ?? error, false));
+    // registerCachedQueryKey(queryKeys.user, cacheKey);
 
     return res.status(200).json({
       status: "success",

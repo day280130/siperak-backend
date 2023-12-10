@@ -1,10 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { cacheDuration, makeCacheKey, queryKeys } from "@src/configs/MemcachedConfigs.js";
 import { ReqHandler, logError, serializeZodIssues, snakeToCamel } from "@src/helpers/HandlerHelpers.js";
-import { invalidateCachedQueries, memcached, registerCachedQueryKey } from "@src/helpers/MemcachedHelpers.js";
+import {
+  invalidateCachedQueries,
+  memcached,
+  // registerCachedQueryKey
+} from "@src/helpers/MemcachedHelpers.js";
 import { PrismaClientKnownRequestError, prisma } from "@src/helpers/PrismaHelpers.js";
 import {
-  transactionsCachedQuerySchema,
+  // transactionsCachedQuerySchema,
   transactionQuerySchema,
   transactionSchema,
   TransactionProducts,
@@ -27,38 +31,38 @@ const getTransactions: ReqHandler = async (req, res, next) => {
         message: serializeZodIssues(parsedQueries.error.issues, "invalid query shape"),
       });
 
-    const cacheKey = makeCacheKey(
-      queryKeys.transaction,
-      ...Object.values(parsedQueries.data).map(query => query.toString())
-    );
+    // const cacheKey = makeCacheKey(
+    //   queryKeys.transaction,
+    //   ...Object.values(parsedQueries.data).map(query => query.toString())
+    // );
 
-    const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
-    if (rawCachedData) {
-      let cachedData;
-      try {
-        cachedData = JSON.parse(rawCachedData.result);
-      } catch (error) {
-        logError(`${req.path} > getTransactions handler`, error, true);
-      }
-      const parsedCachedData = transactionsCachedQuerySchema.safeParse(cachedData);
-      if (parsedCachedData.success) {
-        // console.log("getting transactions from cache");
-        memcached
-          .touch(cacheKey, cacheDuration.super)
-          .catch(error => logError(`${req.path} > getTransactions handler`, error.reason ?? error, false));
-        return res.status(200).json({
-          status: "success",
-          message: "query success",
-          datas: { ...parsedCachedData.data, queries: parsedQueries.data },
-        });
-      } else {
-        logError(
-          `${req.path} > getTransactions handler`,
-          serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
-          false
-        );
-      }
-    }
+    // const rawCachedData = await memcached.get<string>(cacheKey).catch(() => undefined);
+    // if (rawCachedData) {
+    //   let cachedData;
+    //   try {
+    //     cachedData = JSON.parse(rawCachedData.result);
+    //   } catch (error) {
+    //     logError(`${req.path} > getTransactions handler`, error, true);
+    //   }
+    //   const parsedCachedData = transactionsCachedQuerySchema.safeParse(cachedData);
+    //   if (parsedCachedData.success) {
+    //     // console.log("getting transactions from cache");
+    //     memcached
+    //       .touch(cacheKey, cacheDuration.super)
+    //       .catch(error => logError(`${req.path} > getTransactions handler`, error.reason ?? error, false));
+    //     return res.status(200).json({
+    //       status: "success",
+    //       message: "query success",
+    //       datas: { ...parsedCachedData.data, queries: parsedQueries.data },
+    //     });
+    //   } else {
+    //     logError(
+    //       `${req.path} > getTransactions handler`,
+    //       serializeZodIssues(parsedCachedData.error.issues, "failed parsing cache"),
+    //       false
+    //     );
+    //   }
+    // }
 
     // console.log("getting transactions from db");
     const where: Prisma.TransactionWhereInput = {
@@ -126,18 +130,18 @@ const getTransactions: ReqHandler = async (req, res, next) => {
     const transactionsCount = await prisma.transaction.count({ where });
     const maxPage = Math.ceil(transactionsCount / parsedQueries.data.limit) - 1;
 
-    memcached
-      .set(
-        cacheKey,
-        JSON.stringify({
-          datas: transactions,
-          maxPage,
-          dataCount: transactionsCount,
-        }),
-        cacheDuration.super
-      )
-      .catch(error => logError(`${req.path} > getTransactions handler`, error.reason ?? error, false));
-    registerCachedQueryKey(queryKeys.transaction, cacheKey);
+    // memcached
+    //   .set(
+    //     cacheKey,
+    //     JSON.stringify({
+    //       datas: transactions,
+    //       maxPage,
+    //       dataCount: transactionsCount,
+    //     }),
+    //     cacheDuration.super
+    //   )
+    //   .catch(error => logError(`${req.path} > getTransactions handler`, error.reason ?? error, false));
+    // registerCachedQueryKey(queryKeys.transaction, cacheKey);
 
     return res.status(200).json({
       status: "success",
