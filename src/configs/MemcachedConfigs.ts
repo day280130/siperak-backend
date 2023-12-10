@@ -3,11 +3,13 @@ import Memcached from "memcached";
 export const memcachedDefault = new Memcached(process.env.CACHE_DB_URL ?? "localhost:11211", {
   maxExpiration: 8 * 24 * 60 * 60, // 8 days
   reconnect: 1000,
-  retries: 3,
-  failures: 3,
   timeout: 1000,
   retry: 1000,
-  poolSize: 50,
+  retries: 0,
+  failures: 1,
+  // retries: 3,
+  // failures: 3,
+  // poolSize: 50,
 });
 
 // memcachedDefault.settings((_, settings) => {
